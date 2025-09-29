@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile-safe layout */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0b141c;
+  color: #e7eef7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: contain; /* prevent bounce causing layout shifts */
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Make the main app container scrollable on small screens */
+#app {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  overflow: auto;            /* allow vertical scroll */
+  -webkit-overflow-scrolling: touch; /* smooth momentum scrolling on iOS */
+}
+
+/* Utility: truncate long text in cards/headers where needed */
+.clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Panels: ensure padding scales on mobile */
+.panel {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
+}
+
+/* Buttons: larger touch targets on mobile */
+.btn {
+  min-height: 44px;
+}
+
+/* Fix absolute UIs overflowing: add inner wrapper that scrolls */
+.ui-root {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+.ui-center {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* Reduce large font sizes on small screens */
+@media (max-width: 480px) {
+  h1, .text-4xl { font-size: 1.75rem; line-height: 2.1rem; }
+  h2, .text-2xl { font-size: 1.25rem; line-height: 1.75rem; }
+  .max-w-md { max-width: 100%; }
+  .max-w-xl { max-width: 100%; }
+  .p-6 { padding: 1rem; }
+  .px-6 { padding-left: 1rem; padding-right: 1rem; }
+  .py-3 { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+}

@@ -1,0 +1,247 @@
+Hivemind Frontend Architecture and Integration Guide
+
+Purpose This document explains how the current frontend mock (React + Phaser 3) is structured, how components interact, and exactly where to integrate backend APIs and Devvit webview plumbing. It’s written so another coding agent can wire up the backend and replace static/mock data without guesswork.
+
+What you’re looking at
+
+Rendering stack
+Phaser 3 runs the “game shell” (scenes, lifecycle, canvas).
+React renders all UI panels as an overlay on top of Phaser’s canvas.
+State management
+A single Zustand store (stores/gameStore.ts) holds game data, feed, and user actions.
+A small scene management store (stores/sceneManagementStore.ts) keeps track of the active Phaser scene so the React overlay knows which UI to show.
+Data
+An in-file ApiClient inside gameStore.ts mocks network calls. This is the pivot point for integrating real HTTP APIs.
+Repository map (key files)
+
+src/main.tsx: React boot file; loads App and global styles, ensures viewport meta.
+src/App.tsx: Mounts the Phaser canvas and UI container via PhaserGame component.
+src/PhaserGame.tsx: Boots the Phaser game (game/main.ts), listens for scene changes via EventBus, and exposes the current scene to React through the scene store.
+src/PhaserUI.tsx: Decides which React UI component to render based on the active Phaser scene.
+src/game/main.ts: Phaser game config and scene list.
+Phaser scenes (game/scenes)
+Boot.ts: Shows loading text, starts MainMenu, emits current-scene-ready.
+MainMenu.tsx: Scene shell for the home screen (React UI rendered by MainMenuUI).
+Feed.ts: Scene shell for the Join Game feed (React UI rendered by FeedUI).
+Game.tsx: Scene shell for an active game (React UI rendered by GameView).
+HostSetup.ts: Scene shell for hosting flow (React UI rendered by HostSetupUI).
+React UIs (game/ui and ui)
+MainMenuUI.tsx: Home screen actions (navigate to host/join).
+FeedUI.tsx: Join Game feed (active hosted games, per-card dev controls in dev).
+GameView.tsx: Chooses GuessingInterface vs ResultsInterface based on store.currentGame.phase.
+GuessingInterface.tsx: Slider, justification, and submit flow for guesses.
+ResultsInterface.tsx: Results, consensus label, and tooltips/back UX.
+HostSetupUI.tsx: Host flow UI (in src/ui instead of game/ui to reduce Phaser coupling).
+State stores
+stores/gameStore.ts: All game data, types, actions, and the mock ApiClient.
+stores/sceneManagementStore.ts: Tracks the current Phaser scene and a ref to the Phaser game.
+Shared constants
+game/config/constants.ts: Design tokens (colors), SPECTRUMS, GAME_PHASES, and slider ranges.
+styles.css: Tailwind setup + some global utility classes (panel, btn, ui-root, clamp-X).
+Runtime flow and component interactions
+
+Boot and scene lifecycle
+Boot.ts shows a loading label, starts MainMenu, and emits EventBus 'current-scene-ready'.
+PhaserGame.tsx listens for 'current-scene-ready', then:
+Stores the current Phaser scene into sceneManagementStore.
+Exposes a small ref with the Phaser game instance.
+PhaserUI.tsx reads sceneManagementStore.currentScene and renders the matching React UI overlay:
+MainMenu → MainMenuUI
+Feed → FeedUI
+Game → GameView
+HostSetup → HostSetupUI
+Navigation model
+Phaser scenes change navigation at the game layer (scene.start('Feed') etc.).
+The React overlay follows along because PhaserUI switches UI based on the active scene.
+Some UI actions emit EventBus events for simple “return home” behavior:
+GuessingInterface emits 'go-home' after a successful submission; the listening scene transitions to MainMenu.
+State and data flow (Zustand)
+The single source of truth is useGameStore in stores/gameStore.ts.
+Key slices:
+currentGame: The game being viewed or played.
+feed: Array of games for the Join Game list.
+hostDraft: Temporary host-only draft (spectrum, secret target).
+myGuess: Local cache of the user’s guess editor state.
+isLoading, error: Global UI flags.
+userId: Random dev ID in the mock; should be replaced with Reddit identity later.
+Key actions:
+generateHostDraft(): Creates a draft spectrum + secret target (mock).
+publishHostedGame(clue, durationHours): Publishes a game (mock), inserts into feed.
+fetchFeed(): Loads a set of active games (currently mocked).
+loadGame(gameId): Loads one game, optionally transitions to REVEAL if expired (client-side mock).
+submitGuess(guess): Posts a guess (mock) and updates currentGame + feed in one place to keep badges in sync.
+Developer tools: expireGame(gameId) and simulateGuesses(gameId, count) mutate local state for testing.
+UI specifics and expectations
+FeedUI
+Receives Phaser Feed scene instance.
+Pulls games from store.feed and shows “active” items (endTime > now).
+Dev-only row (visible when import.meta.env.DEV) per game card:
+Expire now: sets endTime to now and phase to REVEAL locally; should immediately navigate to open the game so the Results show.
+Simulate 100: Adds 100 random guesses locally to stress test UI.
+Empty state should encourage hosting a new game if no active games exist.
+GameView
+Reads store.currentGame and branches:
+If phase === GUESSING, renders GuessingInterface.
+If phase === REVEAL, renders ResultsInterface.
+GuessingInterface
+Shows the clue and spectrum, a slider 0–100, optional justification, and a Submit button.
+Computes and displays a dynamic “Hivemind median” based on currentGame.guesses.
+On submit:
+Calls store.submitGuess. On success, clears active game and emits 'go-home'.
+ResultsInterface
+Displays results, charts, and the consensus label (derived from guesses dispersion).
+Shows a tooltip explaining the current consensus label in plain language.
+Should include a Back/Home button (in the sticky header) to return to the home scene and clear active game.
+Expects secretTarget to be present on the game response when phase === REVEAL.
+HostSetupUI
+Drives the draft → publish flow:
+generateHostDraft() returns a draft (spectrum + secret target shown to host only).
+publishHostedGame() posts the final game (clue + duration), then the app navigates back to the feed.
+Event bus and scene bridge
+
+EventBus
+'current-scene-ready': Emitted in Boot to sync the first scene with React.
+'go-home': Emitted by GuessingInterface on successful submission; consumed by the scene to return to MainMenu.
+sceneManagementStore
+currentScene: Used by PhaserUI to render the correct React UI.
+phaserGameRef: Exposes Phaser game and current scene references if the UI needs them.
+Styling and tokens
+
+constants.ts defines color tokens for consistent styling in UI components.
+styles.css establishes mobile-friendly layout and utilities (panel rounding, scroll behavior, button touch targets).
+The React UI is absolutely positioned in .ui-root above the Phaser canvas, with its own scrolling to avoid canvas clipping on small screens.
+Data contracts and expectations (client view)
+
+PublicGameData (client-side)
+gameId, hostUserId
+phase: 'GUESSING' | 'REVEAL'
+spectrum: { left, right }
+clue: string
+guesses: [{ userId, guess (0–100), justification?, timestamp }]
+createdAt, endTime
+secretTarget? appears only when phase === REVEAL
+Guess submission
+A single guess per user per game; current store upserts by userId.
+After POST, both currentGame and the feed entry are updated locally so counters stay in sync.
+Phase handling
+In the mock, checkGamePhase transitions games to REVEAL client-side when endTime passes, attaching a fake secretTarget.
+In the real implementation, the server should transition and include secretTarget on GET /games/:id when REVEAL.
+Where to connect the backend (single pivot)
+
+All network calls are centralized in the ApiClient object inside stores/gameStore.ts.
+Replace these methods with real HTTP requests (or a Devvit RPC bridge) without touching the UI:
+drafts.create()
+games.publish()
+games.list()
+games.get()
+games.submitGuess()
+games.daily() (optional)
+After swapping, remove or disable any mock auto-population (e.g., list() fabricating cards) so the feed shows only real, active games.
+Integration approach for Devvit webview + backend
+
+Webview client (this repo)
+Keep the current layout and state store.
+Introduce VITE_API_BASE_URL (or Devvit-provided endpoint) and make ApiClient call real routes.
+Remove client-side checkGamePhase logic or reduce it to a no-op; trust server for phase and secretTarget.
+Backend service (Express + Redis; or Devvit server component)
+Endpoints (suggested)
+POST /api/drafts → { draftId, spectrum, secretTarget? (host-only) }
+POST /api/games → Publish a draft as a live game
+GET /api/games?active=true → List active games (endTime > now, phase = GUESSING)
+GET /api/games/:id → Full game; if REVEAL, include secretTarget and all guesses
+POST /api/games/:id/guesses → Upsert the user’s guess
+Optional dev endpoints:
+POST /api/dev/games/:id/expire
+POST /api/dev/games/:id/simulate
+Identity
+In dev: accept userId from client.
+In prod: trust Reddit identity from Devvit, ignore client-sent userId.
+Shared contracts (recommended)
+Extract shared TypeScript types (PublicGameData, Guess, GamePhase, DTOs) into a /src/shared package to avoid drift.
+Use a validator (e.g., zod) on the server; keep client types aligned.
+Frontend wiring details by feature
+
+Join Game feed (FeedUI + useGameStore.fetchFeed)
+Current behavior: ApiClient.games.list() fabricates games. FeedUI filters active by endTime and displays a count badge based on game.guesses.length.
+Target behavior:
+Server returns only active games.
+Decide whether to return full guesses or a guessCount:
+If guessCount: update the badge to use guessCount instead of guesses.length.
+If full guesses: no UI change needed.
+Empty state: show “Be the first to host one!” and navigate to HostSetup.
+Host flow (HostSetupUI + generateHostDraft + publishHostedGame)
+Current behavior: Draft returns spectrum + secret target; publish creates a game and inserts it at the top of feed.
+Target behavior:
+POST /drafts returns draftId and spectrum; optionally include secretTarget only for host (dev-friendly).
+POST /games publishes with clue + duration; return the new PublicGameData. The client can either insert into feed immediately or re-fetch feed.
+Game detail (GameView + loadGame)
+Current behavior: loadGame pulls game from feed or ApiClient.games.get(), then client may adjust phase via checkGamePhase.
+Target behavior:
+GET /games/:id returns accurate phase and includes secretTarget when REVEAL.
+Remove client-side phase mutation.
+ResultsInterface will render based on server-provided phase and target.
+Guess submission (GuessingInterface + submitGuess)
+Current behavior: POST mock, upsert locally, then emit 'go-home'.
+Target behavior:
+POST real guess, then perform the same local upsert and navigation.
+The server should enforce one guess per user per game and return the stored guess (with timestamp).
+Results (ResultsInterface)
+Consensus label and tooltip
+Label is derived from dispersion (std dev buckets) and shows a non-interactive badge.
+Tooltip explains the label in plain language (e.g., “Guesses are all over the place”).
+Back/Home button
+In the sticky header, navigate back to MainMenu and clear active game state.
+Developer tools (dev-only)
+
+expireGame(gameId)
+For local testing, updates endTime and phase in the store and optionally navigates into the game to show Results.
+In a backend setting, prefer calling a dev endpoint to expire server-side.
+simulateGuesses(gameId, count)
+Locally injects guesses to stress test visuals.
+In a backend setting, optional dev endpoint to do this server-side.
+Environment and build
+
+Requirements: Node 18+, a package manager (npm/pnpm/yarn).
+Typical commands (Vite project):
+Install: npm install
+Run dev: npm run dev (starts Vite dev server)
+Build: npm run build
+Preview: npm run preview
+Env variables
+VITE_API_BASE_URL: If set, ApiClient should call the backend. If unset, the mock stays active.
+In iframe/webview: game/main.ts disables WebAudio in dev to avoid autoplay/HMR issues.
+Operational notes and gotchas
+
+Webview sizing
+Canvas runs under a scrollable .ui-root overlay; keep UI panels within the overlay to prevent canvas scroll fights.
+Performance
+Avoid returning large guess arrays in the feed list; consider guessCount in list and full guesses in detail calls.
+Time/phase
+The server should transition GUESSING → REVEAL when endTime elapses; the client should not guess the secretTarget.
+Identity
+The mock uses a random userId; in Devvit, inject and trust the authenticated Reddit user instead.
+Integration checklist (ordered)
+
+Define shared types (GamePhase, PublicGameData, Guess, DTOs).
+Implement backend endpoints for drafts, games publish, list, get, and submit guess.
+Enable CORS for the webview origin(s).
+In stores/gameStore.ts, replace ApiClient mocks with real fetch/XHR calls; point to VITE_API_BASE_URL.
+Remove feed auto-population of mock cards; server becomes the source of truth.
+Decide on list payload shape (guessCount vs guesses) and adjust FeedUI badge if needed.
+Remove client-side checkGamePhase mutation; rely on server for phase and secretTarget.
+Ensure ResultsInterface receives secretTarget when phase === REVEAL.
+Keep dev-only switches behind import.meta.env.DEV (or replace with dev endpoints).
+Wire identity once Reddit/Devvit auth is available; ignore client-provided userId.
+Glossary
+
+Game: A live hosted round with a spectrum, a clue, and a countdown (endTime).
+Guess: A user’s numeric position 0–100 on the spectrum, with optional justification.
+Phase: GUESSING (accepting guesses) or REVEAL (results visible; secretTarget known).
+Draft: Temporary host-only object containing spectrum and secretTarget before publish.
+Hivemind median: Median of all guesses; shown while guessing as a social signal.
+Consensus label: Qualitative label summarizing dispersion of guesses (“Strong Consensus”, “Split Debate”, etc.).
+With this guide, an integrating agent can confidently:
+
+Replace the ApiClient mock with real endpoints without touching UI components.
+Ensure server-driven phase transitions and secret target handling.
+Keep the UX (feed, host flow, guess flow, results, back/empty states) intact while moving to a Devvit-friendly backend.

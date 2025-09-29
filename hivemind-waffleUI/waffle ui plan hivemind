@@ -1,0 +1,235 @@
+Notes
+
+All paths are under /home/user/src.
+We won’t restructure yet; this keeps your current Phaser + React overlay intact.
+We’ll mock “API endpoints” behind the store, using endpoint-shaped functions so a Devvit backend can be swapped in later.
+
+
+Ticket 1 — Host duration selector and publish with duration Estimate: 1.5–2.5h
+
+Files to touch
+
+ui/HostSetupUI.tsx
+Component HostSetupUI: add a Duration dropdown (1h, 3h, 6h, 24h).
+Handler for “Start Game”: pass durationHours to scene/startGame (or directly to store if you call it there).
+game/scenes/HostSetup.ts
+Method that currently triggers publishHostedGame: update signature to startGame(clue: string, durationHours: number).
+After success, navigate back to Main Menu (existing behavior).
+stores/gameStore.ts
+Action publishHostedGame: change signature to publishHostedGame(clue: string, durationHours: number).
+When creating the new game, set endTime = Date.now() + durationHours36001000.
+Acceptance criteria
+
+“Start Game” is disabled until a non-empty clue is entered.
+Duration defaults to 24h but can be changed.
+Publishing returns to Home screen; new game appears in Feed with the correct remaining time.
+
+Test steps
+
+Host → choose 1h → Start Game → check Feed shows “Ends in ~1h.”
+Host → choose 24h → Start Game → check Feed shows ~24h.
+
+Ticket 2 — API-shaped mocks (single swap point later) Estimate: 1.5–2h
+
+Files to touch
+
+stores/gameStore.ts
+Define an internal ApiClient-like object with functions shaped like:
+drafts.create() → POST /api/drafts
+games.publish({ draftId, clue, durationHours }) → POST /api/games
+games.list() → GET /api/games
+games.get(gameId) → GET /api/games/:id
+games.submitGuess(gameId, { value, justification? }) → POST /api/games/:id/guesses
+games.daily() → GET /api/daily
+Your existing actions (generateHostDraft, publishHostedGame, fetchFeed, loadGame, submitGuess) should call through this internal ApiClient. For now, implement these with in-memory/static data.
+Acceptance criteria
+
+All store actions work via the ApiClient-like layer (single place to swap to Devvit later).
+There’s an obvious single file to replace when the backend is ready.
+Test steps
+
+Confirm Host → Feed → Game → Submit still works after the refactor.
+Ticket 3 — Feed cards: time remaining and small stats Estimate: 1–1.5h
+
+Files to touch
+
+game/ui/FeedUI.tsx
+Component FeedUI: For each item, compute remaining time from endTime and render as “Ends in 2h 15m.”
+Show a “X guesses” badge (length of guesses array).
+Acceptance criteria
+
+Each card shows clue and “Ends in …”.
+Time is correct within a minute; no negative times for active games.
+Test steps
+
+Publish a 1h game and a 24h game; check times.
+Click a card to enter the game.
+Ticket 4 — Deep link: ?gameId=… should open Game directly Estimate: 1–2h
+
+Files to touch
+
+game/scenes/Boot.ts (or App.tsx if you prefer to centralize)
+On scene create/mount: read gameId from window.location.search (URLSearchParams).
+If present: await useGameStore.getState().loadGame(gameId), then navigate to 'Game' scene.
+Acceptance criteria
+
+Visiting the app with ?gameId=abc goes directly to the Game scene once loaded.
+Test steps
+
+Start app with a query param matching a mock gameId; confirm it opens Game.
+Ticket 5 — Live median polling (store + lifecycle) Estimate: 2–3h
+
+Files to touch
+
+stores/gameStore.ts
+Add state: liveMedian: number | null, medianTimer: any | null.
+Add startMedianPolling(gameId: string): setInterval at ~30s to recalc median from guesses or mock cache; set liveMedian.
+Add stopMedianPolling(): clearInterval and set medianTimer = null.
+In loadGame(gameId), start polling; ensure you don’t create duplicate intervals.
+Auto phase transition: inside the polling tick (or a separate interval), if Date.now() > currentGame.endTime, set phase to REVEAL.
+game/scenes/Game.tsx
+Use scene.events.on('shutdown', ...) or scene.events.once('shutdown', ...) to call stopMedianPolling when leaving the scene.
+Acceptance criteria
+
+While viewing a game, liveMedian in the UI updates roughly every 30s.
+When leaving the Game scene, polling stops (no memory leaks).
+If endTime passes while viewing, UI transitions to Results automatically.
+Test steps
+
+Load a game; observe live median updates (mock by random walk or recalc from guesses).
+Navigate away; verify no further console logs/updates occur.
+Set endTime to a few seconds in the future; confirm auto transition to REVEAL.
+Ticket 6 — Guessing UI: justification toggle and submission states Estimate: 1.5–2.5h
+
+Files to touch
+
+game/ui/GuessingInterface.tsx
+Component GuessingInterface: add an “Include justification” toggle controlling a textarea visibility.
+Enforce 280-char limit; show a small counter (optional).
+Show current store.liveMedian (e.g., “Hivemind median: 47”) above the slider.
+Disable Submit while request is in-flight; show a subtle “Submitted!” confirmation or transition back to Home upon success.
+stores/gameStore.ts
+submitGuess({ value, justification? }): upsert by “current user” (mock a userId) — replace their prior guess if any.
+Acceptance criteria
+
+Toggling off hides the justification field and submits without it.
+Submit is disabled during transmission; after success, you return to Home (or show confirmation if that’s your current flow).
+If you submit twice, only one guess exists for the user (upsert).
+Test steps
+
+Submit with and without justification; verify behavior and mock payloads.
+Ticket 7 — Results: histogram, consensus label, accolades placeholders Estimate: 3–5h
+
+Files to touch
+
+game/ui/ResultsInterface.tsx
+Component ResultsInterface:
+Histogram: bin guesses into e.g., 10 bins across 0–100; render simple bars (divs with height proportional to count).
+Consensus label: calculate variance or std dev from guesses; map to labels:
+std < 8 → “Perfect Hivemind”
+8–15 → “Strong Consensus”
+15–30 → “Split Debate”
+30 → “Civil War!”
+
+Accolades (mock):
+🏆 The Psychic: closest to secretTarget.
+🎤 The Top Comment: justification with highest “upvotes” (add a mock upvotes number per guess if not present).
+🧐 The Unpopular Opinion: farthest from live median or final median.
+Keep visuals aligned with your existing spectrum/marker layout and tokens.
+Supporting change
+
+stores/gameStore.ts
+On the first transition to REVEAL, attach a secretTarget to currentGame if not already present so Results can compute true scores.
+Acceptance criteria
+
+Results view shows a histogram, a consensus tag, and three accolades based on mock data.
+Visuals match existing design tokens and spacing.
+Test steps
+
+Force REVEAL; feed in a spread of guesses; verify labels and accolades.
+Ticket 8 — GameView: phase switching and median indicator Estimate: 0.5–1h
+
+Files to touch
+
+game/ui/GameView.tsx
+Ensure it shows GuessingInterface when phase=GUESSING and ResultsInterface when phase=REVEAL (likely already in place).
+Add a small live-median indicator at the top of Guessing state if not already shown in GuessingInterface.
+Acceptance criteria
+
+Phase switch happens automatically when the store flips to REVEAL (no reloads).
+Test steps
+
+Let endTime pass; confirm UI switches without user action.
+Ticket 9 — Feed polish and empty/error states Estimate: 1–1.5h
+
+Files to touch
+
+game/ui/FeedUI.tsx
+Show an empty state when no active games exist (“No active games yet — be the first to host!”).
+Optionally show a refresh action that calls fetchFeed again.
+Handle transient “loading” state gracefully.
+Acceptance criteria
+
+No visual jank while loading; clear empty-state messaging.
+Test steps
+
+Clear feed data in mock; verify empty state; refresh to repopulate.
+Ticket 10 — Design consistency audit Estimate: 0.5–1h
+
+Files to touch
+
+styles.css — no functional changes; verify tokens/classes in use.
+game/config/constants.ts — ensure colors/tokens are imported instead of re-hardcoding.
+All UI files above — replace any accidental hardcoded colors with tokens (ACCENT, TEXT_PRIMARY, etc.).
+Acceptance criteria
+
+No stray hardcoded colors; all UI uses tokens or Tailwind utilities as expected.
+#game-container and .ui-root remain unchanged.
+Test steps
+
+Quick grep for hex codes; confirm only in tokens where appropriate.
+Ticket 11 — QA pass (mobile + regression) Estimate: 1–2h
+
+Scope
+
+Mobile viewport: ensure no horizontal scrolling, buttons ≥44px, keyboard doesn’t push layout off-screen.
+Regression: host → feed → game → submit → results all still function with mocks.
+Acceptance criteria
+
+All flows (0–3) pass on mobile and desktop.
+No memory leaks (median polling stops on scene exit).
+Test steps
+
+iOS/Android simulator (or Chrome device mode), run through flows and timing transitions.
+Optional Ticket 12 — Add “Daily Game” entry on Home Estimate: 1–1.5h
+
+Files to touch
+
+game/ui/MainMenuUI.tsx
+Add a “Play Daily” button that calls fetchDailyGame and navigates to Game on success.
+stores/gameStore.ts
+Ensure fetchDailyGame is wired to ApiClient.games.daily() (mocked).
+Acceptance criteria
+
+If a daily game exists, button loads it directly; otherwise show a graceful “No daily today” state.
+—
+
+Dependencies and order
+
+T1, T2 first (publish + mock layer).
+T3, T4 (Feed polish, deep link).
+T5, T6 (median polling, guessing UX).
+T8 (phase switch verify).
+T7 (Results extras).
+T9–T11 (polish and QA).
+Optional T12.
+Rough total: 12–18 hours depending on how much results polish you want now.
+
+Definition of Done (overall)
+
+Flows 0–3 work with mocked API-shaped calls via the store.
+Duration is captured and respected.
+Live median updates and auto phase/reveal transitions are visible.
+Results provide meaningful mock feedback (histogram, consensus, accolades).
+UI matches current visual identity (styles.css + constants.ts).
+One swap point for the backend (ApiClient in gameStore.ts).

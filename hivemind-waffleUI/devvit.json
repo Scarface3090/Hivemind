@@ -1,0 +1,25 @@
+
+{
+  "name": "Hivemind",
+  "version": "0.1.0",
+  "post": {
+    "dir": "dist/client",
+    "entrypoints": {
+      "default": {
+        "entry": "index.html"
+      }
+    }
+  },
+  "server": {
+    "entry": "dist/server/index.cjs"
+  },
+  "permissions": {
+    "http": {
+      "allow": false
+    },
+    "redis": false
+  },
+  "dev": {
+    "subreddit": "your-test-subreddit"
+  }
+}

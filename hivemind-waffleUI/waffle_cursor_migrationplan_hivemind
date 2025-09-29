@@ -1,0 +1,216 @@
+High-level goals
+
+Split the repo into client, server, and shared.
+Replace all client mocks with real HTTP calls, but keep an easy dev fallback.
+Centralize types and validation so both sides stay in lockstep.
+Move phase transitions (GUESSING → REVEAL) and secretTarget handling to the server.
+Persist games/guesses in Redis with fast list feeds.
+Keep dev tools and empty-state UX (“Host a game”) intact.
+Phase 0 — Prep and repo structure Deliverables:
+
+Monorepo layout
+/src/client: move current frontend here (everything in /src becomes /src/client)
+/src/server: new Express TypeScript server
+/src/shared: shared types/constants and schema validators
+Package setup
+Single package.json or a workspaces setup (npm/pnpm/yarn)
+Root scripts: dev:client, dev:server, dev (runs both), build:client, build:server
+Environment
+Backend: REDIS_URL, PORT, NODE_ENV
+Frontend: VITE_API_BASE_URL (empty in dev when you want mock, set to server URL when using API)
+
+
+
+Phase 1 — Shared contracts (types and schemas) Why now: The client already uses PublicGameData, GAME_PHASES, and request/response shapes. Move these to a single source so the server returns exactly what the client expects.
+
+In /src/shared (consumed by both):
+
+Types/interfaces
+GamePhase, GAME_PHASES
+PublicGameData (extend to optionally include secretTarget when phase === REVEAL)
+Guess, UserGuess, HostDraft, Spectrum
+API DTOs:
+POST /drafts: CreateDraftResponse
+POST /games: PublishGameRequest, PublishGameResponse
+GET /games: ListGamesResponse = PublicGameData[]
+GET /games/:id: GetGameResponse = PublicGameData
+POST /games/:id/guesses: SubmitGuessRequest, SubmitGuessResponse
+Validation schemas (zod or similar). Keep the server strict and the client typed.
+
+
+Phase 2 — Server scaffold Deliverables:
+
+Express + TypeScript server
+Redis client (ioredis) and a config loader
+Global error handler, request logging (pino), CORS
+Folder layout:
+/src/server/index.ts (bootstrap)
+/src/server/routes (drafts, games)
+/src/server/services (gameService, draftService)
+/src/server/store (redis repositories)
+/src/server/middleware (auth placeholder, request validation)
+/src/server/utils (ids, time)
+
+
+
+Phase 3 — Redis data model Design keys for fast reads/writes:
+
+Drafts
+draft:{draftId} -> JSON { draftId, hostUserId, spectrum, secretTarget, createdAt, expiresAt }
+TTL (e.g., 30–60 min) so abandoned drafts clean up
+Games
+game:{gameId} -> hash/JSON of public fields:
+{ gameId, hostUserId, phase, clue, spectrum, createdAt, endTime, guessCount }
+game:{gameId}:secretTarget -> integer (server-only)
+game:{gameId}:guesses -> list/sorted set of JSON guess entries { userId, guess, justification?, timestamp }
+Indexes
+games:active -> sorted set by endTime (only GUESSING games)
+games:all -> set of gameIds (optional)
+Basic operations
+Create draft: SET draft + TTL
+Publish game: GET draft → create game, set indexes, DELETE draft
+List active: ZRANGEBYSCORE now..inf on games:active, fetch game hashes (include guessCount)
+Add/upsert guess: remove prior guess by same user (if needed), push new, update guessCount
+Auto-transition on read: if now > endTime and phase=GUESSING, set phase=REVEAL, remove from games:active, keep secretTarget
+
+
+
+Phase 4 — Minimal endpoints (server) Implement in this order (each endpoint fully typed against /src/shared):
+
+Health
+GET /api/health -> { ok: true } for quick sanity checks
+Drafts
+POST /api/drafts
+Auth placeholder: accept hostUserId in dev; later from Reddit identity
+Create draft with spectrum and secretTarget
+Response: { draftId, spectrum } (optionally include secretTarget only to the creator; your current HostSetup UI expects target in the client; allow this in dev)
+Games: publish
+POST /api/games
+Body: { draftId, clue, durationHours }
+Use hostUserId from auth (for now dev: accept param)
+Atomically create game from draft, set endTime, phase=GUESSING, guessCount=0
+Return PublicGameData (no secretTarget)
+Games: list
+GET /api/games?active=true
+Return only GUESSING games where endTime > now
+Order by endTime ascending
+Include guessCount so the badge can be accurate without fetching all guesses
+Response: PublicGameData[] (guesses could be empty; client shows count badge from g.guesses.length today. Two options:
+Option A: return guesses for list (could be heavy)
+Option B: augment PublicGameData with guessCount and have the client show guessCount instead of guesses.length. If you choose B, update the FeedUI to use guessCount. If you want zero client changes now, return guesses=[], but then the badge won’t be accurate. Easiest near-term: keep guesses array shallow or include only userIds.)
+Games: get by id
+GET /api/games/:id
+If game has ended and phase=GUESSING, transition to REVEAL server-side
+If REVEAL, include secretTarget in the response; if not, omit it
+Include guesses (full list) so ResultsInterface has everything it needs
+Response: PublicGameData (+ secretTarget when REVEAL)
+Guesses: submit
+POST /api/games/:id/guesses
+Body: { value, justification? } (userId from auth; dev mode: accept from request)
+Validate 0..100, trim justification
+Upsert per (gameId, userId): remove previous guess if exists, then add new
+Increment guessCount
+Return the stored guess { userId, guess, justification?, timestamp }
+Optional dev-only endpoints (guarded by NODE_ENV=development):
+
+POST /api/dev/games/:id/expire → set endTime = now, phase=REVEAL
+POST /api/dev/games/:id/simulate → add N random guesses
+
+
+Phase 5 — Client wiring (replace mocks behind a flag) Touch points (current files):
+
+src/stores/gameStore.ts
+ApiClient.games.list → call GET /api/games?active=true (no more fabrications)
+ApiClient.games.get → call GET /api/games/:id
+ApiClient.games.publish → POST /api/games
+ApiClient.games.submitGuess → POST /api/games/:id/guesses
+ApiClient.drafts.create → POST /api/drafts
+fetchFeed → set feed = server list (don’t merge). This aligns with your “show only real active games” requirement.
+loadGame → remove local checkGamePhase; trust server for phase and secretTarget. You can leave checkGamePhase as a no-op shim temporarily.
+submitGuess → keep your local “update feed + currentGame” optimization so the badge updates instantly. It will match the server since the server accepted the guess.
+src/game/ui/FeedUI.tsx
+Empty state: update copy to invite hosting; wire button to HostSetup scene (you already have scene.goBack and scene.openGame; add a Host button pointing to MainMenu.hostGame or a direct scene start)
+If you decide to use guessCount instead of guesses.length for the badge, update here; otherwise ensure the server returns guesses to keep the count correct.
+src/game/ui/ResultsInterface.tsx
+It already reads secretTarget from game when REVEAL; server will now supply it.
+Dev/Prod toggle
+
+If VITE_API_BASE_URL is unset, keep using the current in-memory mock (handy for offline UI iteration).
+If set, the ApiClient uses real HTTP requests to the server.
+
+
+
+Phase 6 — Identity and trust model Incremental approach:
+
+Phase 6a (Dev): Continue using the client’s store.userId to identify users. Pass it to the server. Acceptable for local testing.
+Phase 6b (Prod-ready): Use Devvit identity or Reddit OAuth
+Server middleware validates user identity from headers or a signed JWT from the Devvit runtime.
+Ignore client-provided userId. Use authenticated reddit_user_id as the source of truth.
+Add a /api/me endpoint for the client to fetch its canonical userId once and call setUserId() in the store.
+
+
+Phase 7 — Performance and correctness
+
+Server-side phase transitions: ensure GET /games and GET /games/:id harmlessly transition GUESSING → REVEAL when endTime passes (idempotent update).
+Redis pipelines:
+Upsert guess = get previous -> remove -> add -> incr guessCount in a single pipeline
+Publish = copy draft to game + delete draft in a pipeline
+Payload sizes:
+For lists: avoid returning hundreds of guesses for each card. Either include only guessCount or limit to N most recent guesses and rely on GET /games/:id for full detail.
+Rate limiting
+Per IP and per user on POST guesses and POST publish
+Add a small cooldown to prevent spam submissions
+
+
+
+Phase 8 — Observability and QA
+
+Logging: request logs, structured game lifecycle logs
+Metrics: counts of created games, guesses, average guessCount, reveal rate
+QA checklist
+Feed shows only active games (no mocks)
+Host flow: draft → publish → game visible in feed
+Guess flow: submit updates detail and feed badge immediately
+Expire flow: when endTime passes (or dev expire), loadGame returns phase=REVEAL and includes secretTarget; Results UI renders correctly
+Empty state: when no active games, show “Be the first to host one!” and navigate to HostSetup
+Tooltip on consensus works (already done)
+Back button in Results returns to Main Menu and clears currentGame
+
+
+
+Phase 9 — Deployment plan
+
+Redis: managed Redis (Upstash/Redis Cloud) or self-hosted
+Server: deploy to a Node-friendly serverless (Vercel/Render/Fly/Cloud Run) or Devvit server component
+Set CORS to allow reddit webview domains and your local dev origin
+Client: in Devvit post, the webview loads your built client. Ensure VITE_API_BASE_URL points to your server.
+Secrets: store REDIS_URL and any signing keys in platform secrets manager
+Request/response shapes reference (aligned to your current store)
+
+PublicGameData
+gameId, hostUserId, phase (‘GUESSING’|‘REVEAL’), spectrum { left, right }, clue, guesses: { userId, guess, justification?, timestamp }[], createdAt, endTime, secretTarget? (only when REVEAL)
+POST /api/drafts → { draftId, spectrum, secretTarget? } (secretTarget visible to host in dev)
+POST /api/games { draftId, clue, durationHours } → PublicGameData (no secretTarget)
+GET /api/games?active=true → PublicGameData[] (consider minimizing guesses for list)
+GET /api/games/:id → PublicGameData (includes secretTarget if REVEAL)
+POST /api/games/:id/guesses { value, justification? } → { userId, guess, justification?, timestamp }
+Cutover checklist (in order)
+
+Create /src/shared; move types; update client imports to use shared.
+Scaffold /src/server; add health route; run locally.
+Implement drafts publish flow; wire HostSetup to use real POST /drafts, POST /games.
+Implement GET /games (active); switch fetchFeed to server; remove mock injection.
+Implement GET /games/:id and POST /guesses; switch loadGame and submitGuess to server.
+Remove client-side checkGamePhase logic; rely on server phase/secretTarget.
+QA dev tools:
+Use server dev endpoints or keep client-only simulate/expire for development (don’t expose in production builds).
+Turn on empty-state CTA to host game; verify join/host navigation.
+Add identity middleware when you integrate with Devvit/Reddit auth.
+Notes tailored to your current code
+
+gameStore.ts already abstracts ApiClient in one place—perfect pivot point for the swap.
+FeedUI badge currently uses g.guesses.length. Either:
+Return guesses from GET /games (fine for small loads), or
+Introduce guessCount in PublicGameData and adjust the badge to use it.
+ResultsInterface assumes secretTarget appears on the game when REVEAL. The server should include it in GET /games/:id.
+You already added a Home button in Results and Guessing via EventBus.go-home; no extra wiring needed post-migration.

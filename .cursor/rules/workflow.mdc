@@ -1,0 +1,188 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+**# Development Agent Workflow - Cursor Rules**
+
+**## Primary Directive**
+
+You are a development agent implementing a Devvit project. Follow established documentation and maintain consistency with Devvit patterns.
+
+**## Core Workflow Process**
+
+**### Before Starting Any Task**
+
+- Consult `/docs/Implementation.md` for current stage and available tasks
+- Check task dependencies and prerequisites
+- Verify scope understanding
+- ***MANDATORY****: Check `/docs/project_structure.md` for directory structure requirements
+
+**### Task Execution Protocol**
+
+**#### 1. Task Assessment**
+
+- Read subtask from `/docs/Implementation.md`
+- Assess subtask complexity:
+
+- ****Simple subtask:**** Implement directly
+
+- ****Complex subtask:**** Create a todo list with specific steps
+
+**#### 2. Architecture Decision**
+
+- Determine if task involves:
+
+- ****Client-side****: React UI shell + Phaser 3 interactive elements
+
+- ****Server-side****: Serverless Express API on Devvit runtime
+
+- ****Shared****: Types and utilities between client/server
+
+- Follow the established directory structure:
+
+- `/src/client/` - React views, components, Phaser scenes, API wrappers
+
+- `/src/server/` - Express routes in `core/routes/`, services in `core/services/`
+
+- `/src/shared/` - Shared types and utilities
+
+**#### 3. Documentation Research**
+
+- Check `/docs/Implementation.md` for relevant documentation links in the subtask
+- Read and understand documentation before implementing
+- ***For Devvit-specific tasks****: Use `devvit_search` to find current patterns
+
+**#### 4. UI/UX Implementation**
+
+- Consult `/docs/UI_UX_doc.md` before implementing any UI/UX elements
+- Follow design system specifications and responsive requirements
+- ***Client structure****: Use React for UI shell, Phaser for interactive elements
+- ***File organization****:
+
+- React screens in `src/client/views/`
+
+- Reusable components in `src/client/components/`
+
+- Phaser scenes in `src/client/game/scenes/`
+
+**#### 5. Server Implementation**
+
+- ***Server structure****: Use Express with Devvit's `createServer(app)` pattern
+- ***Route organization****: Place route handlers in `src/server/core/routes/`
+- ***Service layer****: Business logic in `src/server/core/services/`
+- ***Redis access****: Use helpers in `src/server/core/redis/`
+- ***Pattern****: Always use `import { createServer, context, redis } from '@devvit/web/server'`
+
+**#### 6. Project Structure Compliance**
+
+- Check `/docs/project_structure.md` before:
+
+- Running commands
+
+- Creating files/folders
+
+- Making structural changes
+
+- Adding dependencies
+
+- ***Directory rules****:
+
+- Never create files outside the established structure
+
+- Always use the correct subdirectories (views/, components/, core/routes/, etc.)
+
+- Follow the build output pattern to `/dist`
+
+**#### 7. Build and Testing**
+
+- ***Build process****: Use `npm run build` to compile both client and server
+- ***Deploy process****: Use `npx devvit playtest` for testing
+- ***Testing requirements****:
+
+- Test on Reddit test subreddit
+
+- Verify all API endpoints work
+
+- Check UI/UX on mobile and desktop
+
+- Ensure no console errors
+
+**#### 8. Error Handling**
+
+- Check `/docs/Bug_tracking.md` for similar issues before fixing
+- Document all errors and solutions in Bug_tracking.md
+- Include error details, root cause, and resolution steps
+- ***Devvit-specific errors****: Use `devvit_search` to find solutions
+
+**#### 9. Task Completion**
+
+Mark tasks complete only when:
+
+- All functionality implemented correctly
+- Code follows project structure guidelines
+- UI/UX matches specifications (if applicable)
+- No errors or warnings remain
+- All task list items completed (if applicable)
+- ***Build and deploy successfully****
+- ***Tested on Reddit test environment****
+
+**### File Reference Priority**
+
+1. `/docs/Bug_tracking.md` - Check for known issues first
+
+2. `/docs/Implementation.md` - Main task reference
+
+3. `/docs/project_structure.md` - Structure guidance
+
+4. `/docs/UI_UX_doc.md` - Design requirements
+
+5. ****Devvit documentation**** - Use `devvit_search` for current patterns
+
+**### Devvit-Specific Guidelines**
+
+**#### Server Development**
+
+- ***Always use****: `createServer(app)` from `@devvit/web/server`
+- ***Never use****: Direct Express server creation
+- ***Route organization****: Place in `src/server/core/routes/`
+- ***Redis access****: Use `import { redis } from '@devvit/web/server'`
+- ***Context access****: Use `import { context } from '@devvit/web/server'`
+
+**#### Client Development**
+
+- ***React shell****: For UI screens and navigation
+- ***Phaser 3****: For interactive elements (sliders, visualizations)
+- ***API calls****: Use fetch() to server endpoints
+- ***No websockets****: Use polling or Devvit's realtime service
+
+**#### Build and Deploy**
+
+- ***Vite config****: Must output to `/dist/client` and `/dist/server`
+- ***Devvit config****: `devvit.json` must point to correct dist files
+- ***Testing****: Always test with `npx devvit playtest`
+
+**## Critical Rules**
+
+- ***NEVER**** skip documentation consultation
+- ***NEVER**** mark tasks complete without proper testing
+- ***NEVER**** ignore project structure guidelines
+- ***NEVER**** implement UI without checking UI_UX_doc.md
+- ***NEVER**** fix errors without checking Bug_tracking.md first
+- ***NEVER**** create files outside the established directory structure
+- ***NEVER**** use direct Express server creation (use Devvit's createServer)
+- ***ALWAYS**** document errors and solutions
+- ***ALWAYS**** follow the established workflow process
+- ***ALWAYS**** test on Reddit test environment before marking complete
+- ***ALWAYS**** use proper Devvit patterns for server implementation
+
+**## Workflow Violations to Avoid**
+
+- Creating React components in wrong directories
+- Using Express directly instead of Devvit's createServer
+- Not organizing routes in core/routes/
+- Skipping build and deploy testing
+- Not following the established directory structure
+- Implementing without checking documentation first
+
+Remember: Build a cohesive, well-documented, and maintainable Devvit project. Every decision should support overall project goals and maintain consistency with established Devvit patterns.
