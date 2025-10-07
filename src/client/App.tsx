@@ -1,19 +1,89 @@
-import { useMemo } from 'react';
-import StartGame from './game/main';
+import { RouterProvider, createHashRouter, isRouteErrorResponse, useRouteError, Navigate } from 'react-router-dom';
+import AppLayout from './components/AppLayout/AppLayout.js';
+import HomeScreen from './views/HomeScreen/HomeScreen.js';
+import GameFeed from './views/GameFeed/GameFeed.js';
+import HostView from './views/HostView/HostView.js';
+import { AppProvider } from './providers/AppProvider.js';
 
-const App = () => {
-  useMemo(() => {
-    StartGame('game-container');
-  }, []);
+const RouteErrorBoundary = (): JSX.Element => {
+  const error = useRouteError();
+
+  let title = 'Router Error';
+  let details = '';
+
+  if (isRouteErrorResponse(error)) {
+    details = `${error.status} ${error.statusText}`;
+  } else if (error instanceof Error) {
+    details = `${error.name}: ${error.message}\n${error.stack ?? ''}`;
+  } else if (typeof error === 'string') {
+    details = error;
+  } else if (error) {
+    try {
+      details = JSON.stringify(error, null, 2);
+    } catch {
+      details = String(error);
+    }
+  }
+
+  // eslint-disable-next-line no-console
+  console.error('[ROUTER] Route error', error);
 
   return (
-    <div id='app-root' className='min-h-screen bg-dark-gray text-white'>
-      <main className='h-full'>
-        <div id='game-container' className='w-full h-full'></div>
-      </main>
+    <div style={{ padding: 16 }}>
+      <h2>{title}</h2>
+      <pre style={{ whiteSpace: 'pre-wrap' }} id="router-error">
+        {details}
+      </pre>
     </div>
   );
 };
 
-export default App;
+const router = createHashRouter([
+  {
+    path: '/',
+    element: <AppLayout />,
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        index: true,
+        element: <HomeScreen />,
+      },
+      {
+        path: 'feed',
+        element: <GameFeed />,
+      },
+      {
+        path: 'host',
+        element: <HostView />,
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
+      },
+    ],
+  },
+]);
 
+const App = (): JSX.Element => {
+  // Basic router diagnostics once on mount
+  // eslint-disable-next-line no-console
+  console.log('[ROUTER] Initializing router with routes', router.routes.map((r) => r.path));
+
+  // Capture router navigation errors (React Router emits to console by default; we add clarity)
+  (window as any).addEventListener?.('rr:error', (e: any) => {
+    // eslint-disable-next-line no-console
+    console.error('[ROUTER] Error event', e?.detail ?? e);
+  });
+
+  return (
+    <AppProvider>
+      <RouterProvider
+        router={router}
+        future={{ v7_startTransition: true }}
+        fallbackElement={<div>Loading...</div>}
+      />
+    </AppProvider>
+  );
+};
+
+export default App;

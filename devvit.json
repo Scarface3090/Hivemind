@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "hvmtestapp",
+  "name": "hvmtestapp1",
   "post": {
     "dir": "dist/client",
     "entrypoints": {
@@ -13,11 +13,22 @@
     "dir": "dist/server",
     "entry": "index.cjs"
   },
+  "scheduler": {
+    "tasks": {
+      "game-lifecycle-tick": {
+        "endpoint": "/internal/scheduler/game-lifecycle-tick",
+        "cron": "*/1 * * * *"
+      },
+      "game-reveal": {
+        "endpoint": "/internal/scheduler/game-reveal"
+      }
+    }
+  },
   "menu": {
     "items": [
       {
         "label": "Create a new post",
-        "description": "hvmtestapp",
+        "description": "hvmtestapp1",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
@@ -28,6 +39,6 @@
     "onAppInstall": "/internal/on-app-install"
   },
   "dev": {
-    "subreddit": "hvmtestapp_dev3"
+    "subreddit": "hvmndd_dev2"
   }
 }

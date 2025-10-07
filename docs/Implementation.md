@@ -54,12 +54,19 @@
 #### Sub-steps:
 
 - [x] Confirm Devvit project prerequisites, configure environment variables, and document credential management for Google Sheets + Redis (Est. 1 dev-day, Owners: Backend/DevOps).
-- [ ] Establish base project scaffolding in `src/client`, `src/server`, `src/shared` per project structure with linting, formatting, and CI checks (Est. 1 dev-day, Owners: Full-stack).
-- [ ] Implement shared domain models (`Spectrum`, `Game`, `Guess`, `ScoreSummary`, enums) and Zod schemas in `src/shared` (Est. 1 dev-day, Owners: Shared engineer).
-- [ ] Build Google Sheets cache loader service with scheduled refresh and Redis persistence bootstrap (Est. 1.5 dev-days, Owners: Backend).
-- [ ] Create draft creation endpoint (`POST /api/games/draft`) with validation, Redis storage, and server-side tests (Est. 1.5 dev-days, Owners: Backend).
+- [x] Run workflow alignment checklist: review `docs/Bug_tracking.md` for open blockers, reconfirm directory rules in `docs/project_structure.md`, refresh UI guidance in `docs/UI_UX_doc.md`, and capture Stage 1 architecture decisions for client/server/shared boundaries in this document before implementation (Est. 0.5 dev-day, Owners: Full-stack).
+- [x] Establish base project scaffolding in `src/client`, `src/server`, `src/shared` per project structure with linting, formatting, and CI checks *(lint step pending due to ESLint configuration work; scaffolding decisions logged under Bug ID SCAFF-001)*, noting any deviations in `docs/Bug_tracking.md` (Est. 1 dev-day, Owners: Full-stack).
+- [x] Implement shared domain models (`Spectrum`, `Game`, `Guess`, `ScoreSummary`, enums) and Zod schemas in `src/shared` *(2025-09-29 — added canonical enums, shared TS contracts, and Zod validation schemas aligned with Stage 1 API scope)* (Est. 1 dev-day, Owners: Shared engineer).
+- [x] Build Google Sheets cache loader service with scheduled refresh and Redis persistence bootstrap (Est. 1.5 dev-days, Owners: Backend).
+  - *(2025-09-30 — Temporarily gated `refreshSpectrumCache()` behind env var availability, seeded a mock spectrum cache fallback, and removed the `content-refresh` scheduler registration until Google Sheets credentials are provisioned.)*
+  - [ ] **Open Item:** Restore Sheets-powered cache once credentials are configured (remove mock fallback and re-register `content-refresh` scheduler).
+- [x] Create draft creation endpoint (`POST /api/games/draft`) with validation, Redis storage, and server-side tests (Est. 1.5 dev-days, Owners: Backend).
+- [ ] Stage exit validation: run `npm run lint`, `npm run test`, `npm run build`, and `npx devvit playtest`; document outcomes and any defects in `docs/Bug_tracking.md` before marking Stage 1 complete (Est. 0.5 dev-day, Owners: Full-stack).
+  - *(2025-09-30 — Reinitialized Devvit scaffolding and confirmed `npm run dev` successfully launches playtest environment.)*
 
-- *Required resources:* Backend engineer, shared types engineer, DevOps support for credentials, access to Google Sheets cache, CI pipeline configuration.
+*Stage 1 architecture alignment summary:* Client work resides in `src/client` (React shell + Phaser scenes), server endpoints and jobs use Devvit's `createServer(app)` pattern within `src/server/core`, and shared models/validation live under `src/shared`. All new code must honor `project_structure.md` directory rules and reference `UI_UX_doc.md` for layout/token decisions.
+
+- *Required resources:* Backend engineer, shared types engineer, DevOps support for credentials, access to Google Sheets cache, CI pipeline configuration, workflow lead to enforce documentation and testing checkpoints.
 
 ### Stage 2: Core Features
 
@@ -68,11 +75,16 @@
 
 #### Sub-steps:
 
-- [ ] Implement game publication endpoint (`POST /api/games`) and Redis-backed lifecycle state machine with scheduler hooks (Est. 2 dev-days, Owners: Backend).
-- [ ] Develop scheduler/reveal worker that processes `ACTIVE` → `REVEAL`, computes timers, and queues score calculation (Est. 1.5 dev-days, Owners: Backend).
-- [ ] Build active game discovery (`GET /api/games/active`) with pagination, median snapshot, and Redis sorted sets (Est. 1 dev-day, Owners: Backend).
-- [ ] Stand up client API layer and React routing shell, including shared layout, navigation, and home/feed scaffolding (Est. 2 dev-days, Owners: Frontend).
-- [ ] Create `HostView` form flow integrating draft + publish APIs with optimistic UI and validation states (Est. 1.5 dev-days, Owners: Frontend).
+- [x] Implement game publication endpoint (`POST /api/games`) and Redis-backed lifecycle state machine with scheduler hooks (Est. 2 dev-days, Owners: Backend).
+  - (2025-10-07 — Added `POST /api/games` in `src/server/core/routes/game.route.ts`; wired to `publishGame` in `game.lifecycle.ts` using Devvit `context` for `userId`/`username`.)
+- [x] Develop scheduler/reveal worker that processes `ACTIVE` → `REVEAL`, computes timers, and queues score calculation (Est. 1.5 dev-days, Owners: Backend).
+  - (2025-10-07 — Implemented lifecycle tick and reveal job handlers in `src/server/core/services/game.scheduler.ts` and mounted internal routes in `contentRefresh.route.ts`.)
+- [x] Build active game discovery (`GET /api/games/active`) with pagination, median snapshot, and Redis sorted sets (Est. 1 dev-day, Owners: Backend).
+  - (2025-10-07 — Exposed `GET /api/games/active` in `game.route.ts` delegating to `getActiveGamesFeed` in `game.feed.ts`; response validated via shared Zod schema.)
+- [x] Stand up client API layer and React routing shell, including shared layout, navigation, and home/feed scaffolding *(2025-09-30 — Added typed client fetch helpers, QueryClient provider, shared AppLayout navigation, and Home/Game Feed/Host scaffolds aligned with design tokens)* (Est. 2 dev-days, Owners: Frontend).
+  - (2025-10-07 — Confirmed `src/client/App.tsx` routes and `views/*` screens wired via `AppProvider`; verified `HomeScreen`, `GameFeed`, `HostView` in place.)
+- [x] Create `HostView` form flow integrating draft + publish APIs with optimistic UI and validation states *(2025-09-30 — Implemented React Query-backed draft/publish mutations, client-side validation, optimistic feed refresh, and success/error UX messaging.)* (Est. 1.5 dev-days, Owners: Frontend).
+  - (2025-10-07 — `HostView` submits to draft/publish endpoints; UI follows tokens and updates feed on success.)
 
 - *Required resources:* Backend and frontend engineers, access to scheduler configuration, design references for host/feed screens, QA reviewer for API contract verification.
 
@@ -84,6 +96,7 @@
 #### Sub-steps:
 
 - [ ] Implement guess submission endpoint, per-user enforcement, justification capture, and Redis storage strategy (Est. 2 dev-days, Owners: Backend).
+  - (Not started as of 2025-10-07 — Stage 3 work is pending; no guess submission or results endpoints live yet.)
 - [ ] Build median computation service with 30s cadence, caching, and client polling endpoint (`GET /api/games/{id}`) support (Est. 2 dev-days, Owners: Backend).
 - [ ] Integrate Phaser slider component with React state synchronization, live median indicator, and responsive interaction logic (Est. 2 dev-days, Owners: Frontend/Gameplay).
 - [ ] Create scoring engine computing accuracy, persuasion stub, host score, and persist results payload (Est. 2 dev-days, Owners: Backend).

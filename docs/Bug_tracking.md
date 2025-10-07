@@ -38,6 +38,13 @@ This document tracks bugs, issues, and their resolutions throughout the developm
 ### Low
 - Minor UI inconsistencies
 - Documentation issues
+
+## 2025-09-29
+
+- **Entry ID:** SCAFF-001
+- **Summary:** Documented scaffolding baseline for Stage 1 Task "Establish base project scaffolding".
+- **Details:** Created client/server/shared directory structure with placeholder files to align with `project_structure.md`. Removed legacy Phaser bootstrap and reset client app shell pending design implementation. Recorded lack of lint baseline pending ESLint configuration work.
+- **Status:** Resolved
 - Code quality improvements
 - Nice-to-have features
 
@@ -254,8 +261,6 @@ This document tracks bugs, issues, and their resolutions throughout the developm
 - **Client-side**: React UI shell + Phaser 3 interactive elements
 - **Server-side**: Serverless Express API on Devvit runtime
 - **Shared**: Types and utilities between client/server
-
-## Known Issues
 
 ### Error #11: TypeScript Compilation Errors in Server Build
 **Date:** 2024-12-19  
@@ -1790,3 +1795,61 @@ This document was last updated on 2025-09-18 to include the recent critical fixe
 ---
 
 *This document is a living document and should be updated regularly as bugs are discovered, resolved, and new prevention strategies are implemented.*
+
+## Bug ID: [BUG-017] - ESLint Fails On Generated TypeScript Outputs
+**Severity:** Medium
+**Status:** Open
+**Date Reported:** 2025-09-29
+**Reporter:** AI Agent
+**Assignee:** AI Agent
+
+### Description
+`npm run lint` fails because ESLint tries to parse generated `.d.ts` and `.js` artifacts in `src/` that the TypeScript project service does not include. Errors report that numerous files "were not found by the project service".
+
+### Steps to Reproduce
+1. Install dependencies (`npm install`).
+2. Run `npm run lint`.
+3. Observe parsing errors for each generated `.d.ts`/`.js` file under `src/client`, `src/server`, and `src/shared`.
+
+### Expected Behavior
+Lint should complete successfully without attempting to parse generated artifacts or should have a config that includes them in the TypeScript project service.
+
+### Actual Behavior
+ESLint aborts with parsing errors, citing missing files in the project service despite being present on disk.
+
+### Root Cause Analysis
+The lint script targets `./src` directly, so ESLint traverses emitted `.d.ts` and `.js` files. Our `tsconfig.eslint.json` excludes them, and we do not use `allowDefaultProject`, so the parser cannot resolve these generated modules.
+
+### Resolution Status
+- Cloned repository and confirmed issue.
+- Experimented with updating `tsconfig.eslint.json` to include `.js`/`.d.ts` patterns and to set `allowDefaultProject`; ESLint's TS parser still cannot resolve generated files.
+- Temporarily modified the lint script to ignore `**/*.d.ts` and `**/*.js`, but ESLint still fails because `.tsx` sources depend on generated modules missing from the TS project.
+- Further configuration work pending.
+
+### Next Steps
+- Investigate creating a lint-specific tsconfig that points to `dist/types` or the emitted outputs.
+- Explore `allowDefaultProject` support via ESLint configuration rather than tsconfig (may require `eslint.config.js` or `.eslintrc` change).
+- As fallback, adjust build process to avoid committing generated files into `src/`.
+
+### Prevention
+- Separate build outputs from source directories (use `dist/` or `generated/` outside lint scope).
+- Maintain dedicated ESLint parser configuration aligned with TypeScript project references that include generated artifacts when needed.
+
+### Error #8: ESLint Project Service Scope Gap
+**Date:** 2025-09-29  
+**Severity:** Medium  
+**Status:** Resolved  
+**Error:** ESLint reported `main.tsx was not found by the project service`, blocking the Stage 1 linting milestone.  
+**Root Cause:** The flat config pointed `@typescript-eslint/parser` at project references that excluded React entrypoints and generated JS artifacts, so the parser could not build a program for client files.  
+**Resolution:**
+- Scoped typed linting configs per package (`src/client`, `src/server`, `src/shared`).
+- Tightened each package `tsconfig.json` to include only TypeScript sources and explicitly include `main.tsx` where needed.
+- Added default-project fallbacks and expanded ignore patterns to skip compiled outputs.
+
+**Prevention:** Keep TypeScript includes aligned with actual source files and avoid linting generated outputs. Update lint configs in lock-step with tsconfig structure changes.
+
+## BUG-018: Lifecycle Scheduler Integration
+**Severity:** Info  
+**Status:** Resolved  
+**Date:** 2025-09-30  
+**Summary:** Documented addition of scheduler tasks (`/internal/scheduler/game-lifecycle-tick`, `/internal/scheduler/game-reveal`) and feed endpoint for active games. No defects observed; entry tracks new functionality to aid QA.

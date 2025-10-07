@@ -1,7 +1,8 @@
 import express from 'express';
-import { InitResponse, IncrementResponse, DecrementResponse } from '../shared/types/api';
+import type { InitResponse, IncrementResponse, DecrementResponse } from '../shared/api.js';
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
+import { contentRefreshRouter, gameRouter } from './core/routes/index.js';
 
 const app = express();
 
@@ -11,6 +12,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Middleware for plain text body parsing
 app.use(express.text());
+
+// Basic request logging
+app.use((req, _res, next) => {
+  const start = Date.now();
+  // eslint-disable-next-line no-console
+  console.log('[SERVER] →', req.method, req.url, { headers: req.headers['content-type'] });
+  req.on('close', () => {
+    // eslint-disable-next-line no-console
+    console.log('[SERVER] ⤺ closed', req.method, req.url, `${Date.now() - start}ms`);
+  });
+  next();
+});
 
 const router = express.Router();
 
@@ -121,6 +134,15 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
 
 // Use router middleware
 app.use(router);
+app.use(contentRefreshRouter);
+app.use(gameRouter);
+
+// 404 logging middleware (after routes)
+app.use((req, res) => {
+  // eslint-disable-next-line no-console
+  console.warn('[SERVER] 404 Not Found', req.method, req.url);
+  res.status(404).json({ status: 'error', message: 'Not Found', path: req.url });
+});
 
 // Get port from environment variable with fallback
 const port = process.env.WEBBIT_PORT || 3000;

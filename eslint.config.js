@@ -5,53 +5,93 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   tseslint.configs.recommended,
-  { ignores: ['webroot'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['tools/**/*.{ts,tsx,mjs,cjs,js}'],
-    languageOptions: {
-      ecmaVersion: 2023,
-      globals: globals.node,
-    },
-  },
-  {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['src/server/**/*.{ts,tsx,mjs,cjs,js}'],
-    languageOptions: {
-      ecmaVersion: 2023,
-      globals: globals.node,
-    },
-  },
-  {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['src/client/**/*.{ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 2023,
-      globals: globals.browser,
-    },
-  },
-  {
-    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
-    rules: {
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-unused-vars': ['off'],
-      'no-unused-vars': ['off'],
-    },
     ignores: [
+      'webroot',
       '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
       'eslint.config.js',
+      '**/*.d.ts',
+      '**/*.js',
+      '**/*.js.map',
       '**/vite.config.ts',
       'devvit.config.ts',
     ],
+  },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['tools/**/*.{ts,tsx,mjs,cjs}'],
     languageOptions: {
+      ecmaVersion: 2023,
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['src/shared/**/*.ts?(x)'],
+    languageOptions: {
+      ecmaVersion: 2023,
       parserOptions: {
-        project: ['./tsconfig.json', './src/*/tsconfig.json'],
+        project: './src/shared/tsconfig.json',
+        projectService: true,
+        allowDefaultProject: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: { js },
-    extends: ['js/recommended'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['src/server/**/*.ts?(x)'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      globals: globals.node,
+      parserOptions: {
+        project: './src/server/tsconfig.json',
+        projectService: true,
+        allowDefaultProject: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['src/client/**/*.ts?(x)'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      globals: globals.browser,
+      parserOptions: {
+        project: './src/client/tsconfig.json',
+        projectService: true,
+        allowDefaultProject: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+    },
+  },
+  {
+    files: ['src/client/**/*.{js,mjs,cjs}'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+    },
   },
 ]);
+
