@@ -12,9 +12,12 @@ import {
   saveGameMetadata,
   getGameMetadata,
   addGameToStateIndex,
+  removeGameFromStateIndex,
   enqueueActiveGame,
+  removeFromActiveGameSchedule,
   dequeueActiveGames,
   updateGameState,
+  deleteGameMetadata,
 } from './game.repository.js';
 
 const DRAFT_TTL_SECONDS = 15 * 60;
@@ -35,7 +38,11 @@ const pickRandomSpectrumId = async (): Promise<string> => {
   }
 
   const index = Math.floor(Math.random() * spectra.length);
-  return spectra[index].id;
+  const chosen = spectra[index];
+  if (!chosen) {
+    throw new Error('Failed to select a spectrum.');
+  }
+  return chosen.id;
 };
 
 const randomTargetValue = (): number =>
@@ -67,17 +74,31 @@ export const createDraft = async (hostUserId: string): Promise<DraftRecord> => {
 const requireDraft = async (draftId: string): Promise<DraftRecord> => {
   const record = await getDraft(draftId);
 
-  if (!record || !record.draftId) {
+  const {
+    draftId: id,
+    hostUserId,
+    spectrumId,
+    secretTarget,
+    createdAt,
+    expiresAt,
+  } = (record ?? {}) as Record<string, string | undefined>;
+
+  if (!id || !hostUserId || !spectrumId || !secretTarget || !createdAt || !expiresAt) {
     throw new Error('Draft not found or expired.');
   }
 
+  const parsedSecretTarget = Number(secretTarget);
+  if (!Number.isFinite(parsedSecretTarget)) {
+    throw new Error('Draft malformed: secretTarget missing or invalid.');
+  }
+
   return {
-    draftId: record.draftId,
-    hostUserId: record.hostUserId,
-    spectrumId: record.spectrumId,
-    secretTarget: Number(record.secretTarget),
-    createdAt: record.createdAt,
-    expiresAt: record.expiresAt,
+    draftId: id,
+    hostUserId,
+    spectrumId,
+    secretTarget: parsedSecretTarget,
+    createdAt,
+    expiresAt,
   };
 };
 
@@ -88,27 +109,58 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     throw new Error('Stored spectrum is no longer available.');
   }
 
-  const parsedTiming = record.timing ? JSON.parse(record.timing) : undefined;
+  let parsedTiming: any | undefined;
+  if (record.timing) {
+    try {
+      parsedTiming = JSON.parse(record.timing);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new Error(`Game ${gameId} timing JSON is invalid.`);
+      }
+      throw err;
+    }
+  }
 
   if (!parsedTiming) {
     throw new Error('Game timing metadata missing or invalid.');
   }
 
+  const parsedSecretTarget = Number(record.secretTarget);
+  if (!Number.isFinite(parsedSecretTarget)) {
+    throw new Error('Game metadata malformed: secretTarget missing or invalid.');
+  }
+
+  const {
+    hostUserId,
+    hostUsername,
+    clue,
+    state,
+    totalParticipants,
+    medianGuess,
+    publishedAt,
+  } = record;
+
+  if (!hostUserId || !hostUsername || !clue || !state) {
+    throw new Error('Game metadata missing required fields.');
+  }
+
+  const medianGuessValue = medianGuess === 'null' || medianGuess === undefined ? null : Number(medianGuess);
+
   return {
     gameId,
-    hostUserId: record.hostUserId,
-    hostUsername: record.hostUsername,
-    clue: record.clue,
-    state: record.state as GamePhase,
+    hostUserId,
+    hostUsername,
+    clue,
+    state: state as GamePhase,
     spectrum,
-    secretTarget: Number(record.secretTarget),
+    secretTarget: parsedSecretTarget,
     timing: {
       ...parsedTiming,
       revealAt: parsedTiming.revealAt ?? parsedTiming.endTime,
     },
-    totalParticipants: Number(record.totalParticipants ?? '0'),
-    medianGuess: record.medianGuess === 'null' ? null : Number(record.medianGuess),
-    publishedAt: record.publishedAt || parsedTiming.publishedAt || undefined,
+    totalParticipants: Number(totalParticipants ?? '0'),
+    medianGuess: medianGuessValue,
+    publishedAt: publishedAt || parsedTiming.publishedAt || undefined,
   };
 };
 
@@ -159,12 +211,26 @@ export const publishGame = async (
     publishedAt: timestamps.publishedAt,
   };
 
-  await deleteDraft(request.draftId);
-  await saveGameMetadata(metadata);
-  await addGameToStateIndex(gameId, GamePhase.Active, end.getTime());
-  await enqueueActiveGame(gameId, end.getTime());
-
-  return metadata;
+  try {
+    await saveGameMetadata(metadata);
+    await addGameToStateIndex(gameId, GamePhase.Active, end.getTime());
+    await enqueueActiveGame(gameId, end.getTime());
+    await deleteDraft(request.draftId);
+    return metadata;
+  } catch (error) {
+    // Best-effort rollback to keep system consistent
+    try {
+      await deleteGameMetadata(gameId);
+    } catch {}
+    try {
+      await removeGameFromStateIndex(gameId, GamePhase.Active);
+    } catch {}
+    try {
+      await removeFromActiveGameSchedule(gameId);
+    } catch {}
+    // Do not attempt to restore the draft here; if deleteDraft already happened, it's fine.
+    throw error;
+  }
 };
 
 export const getGameById = async (gameId: string): Promise<GameMetadata | null> => {

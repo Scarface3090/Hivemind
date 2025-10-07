@@ -63,6 +63,10 @@ export const saveGameMetadata = async (metadata: GameMetadata): Promise<void> =>
 export const getGameMetadata = async (gameId: string): Promise<Record<string, string>> =>
   redis.hGetAll(redisKeys.gameMetadata(gameId));
 
+export const deleteGameMetadata = async (gameId: string): Promise<void> => {
+  await redis.del(redisKeys.gameMetadata(gameId));
+};
+
 export const addGameToStateIndex = async (
   gameId: string,
   state: GamePhase,
@@ -77,6 +81,10 @@ export const removeGameFromStateIndex = async (gameId: string, state: GamePhase)
 
 export const enqueueActiveGame = async (gameId: string, score: number): Promise<void> => {
   await redis.zAdd(redisKeys.activeGameSchedule, { member: gameId, score });
+};
+
+export const removeFromActiveGameSchedule = async (gameId: string): Promise<void> => {
+  await redis.zRem(redisKeys.activeGameSchedule, [gameId]);
 };
 
 export const dequeueActiveGames = async (maxScore: number): Promise<string[]> => {

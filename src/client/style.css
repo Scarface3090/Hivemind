@@ -284,12 +284,19 @@ button {
   color: var(--color-dark-gray);
   font-weight: 600;
   border: none;
-  transition: transform 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .pill-button:hover {
   transform: translateY(-1px);
   background: #ff571a;
+}
+
+.pill-button:focus-visible {
+  outline: none;
+  border-radius: 9999px;
+  /* High-contrast outer ring that preserves the pill shape */
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
 }
 
 .skeleton-card {
@@ -416,7 +423,7 @@ button {
   color: inherit;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: transform 140ms ease, border-color 160ms ease, background 160ms ease;
+  transition: transform 140ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .host-form__duration-button:hover {
@@ -428,6 +435,26 @@ button {
   border-color: rgba(255, 69, 0, 0.7);
   background: rgba(255, 69, 0, 0.16);
   color: #ffd7cc;
+}
+
+/* Keyboard focus indicators for duration buttons */
+.host-form__duration-button:focus {
+  outline: none;
+  /* Subtle fallback ring for browsers without :focus-visible */
+  box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.28);
+}
+
+.host-form__duration-button:focus-visible {
+  outline: none;
+  /* High-contrast ring to ensure non-color-only focus cue */
+  box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.35);
+}
+
+.host-form__duration-button--selected:focus,
+.host-form__duration-button--selected:focus-visible {
+  outline: none;
+  /* Maintain visible ring for selected state */
+  box-shadow: 0 0 0 3px rgba(255, 69, 0, 0.35);
 }
 
 .host-form__actions {

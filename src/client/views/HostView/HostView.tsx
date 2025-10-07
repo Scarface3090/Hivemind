@@ -119,7 +119,6 @@ const HostView = (): JSX.Element => {
 
         setStatus('success');
         setStatusMessage('Game published! It is now live for players.');
-        setOptimisticGame(published);
         resetForm();
       } catch (error) {
         setStatus('error');

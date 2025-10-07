@@ -1802,6 +1802,7 @@ This document was last updated on 2025-09-18 to include the recent critical fixe
 **Date Reported:** 2025-09-29
 **Reporter:** AI Agent
 **Assignee:** AI Agent
+**Related:** Error #8 (resolved) - Both stem from TypeScript project-service/ESLint parser scope issues
 
 ### Description
 `npm run lint` fails because ESLint tries to parse generated `.d.ts` and `.js` artifacts in `src/` that the TypeScript project service does not include. Errors report that numerous files "were not found by the project service".
@@ -1820,25 +1821,33 @@ ESLint aborts with parsing errors, citing missing files in the project service d
 ### Root Cause Analysis
 The lint script targets `./src` directly, so ESLint traverses emitted `.d.ts` and `.js` files. Our `tsconfig.eslint.json` excludes them, and we do not use `allowDefaultProject`, so the parser cannot resolve these generated modules.
 
+**Relationship to Error #8:** Both BUG-017 and Error #8 stem from the same fundamental issue: TypeScript project-service/ESLint parser scope mismatches. However, they represent different manifestations:
+- **Error #8 (resolved):** Focused on missing React entrypoints (`main.tsx`) in the project service scope - fixed by scoped client-entry resolution (tsconfig/typed-lint per-package)
+- **BUG-017 (open):** Broader issue with generated `.d.ts`/`.js` artifacts and lint parser project inclusion - requires separate resolution for generated file handling
+
 ### Resolution Status
 - Cloned repository and confirmed issue.
 - Experimented with updating `tsconfig.eslint.json` to include `.js`/`.d.ts` patterns and to set `allowDefaultProject`; ESLint's TS parser still cannot resolve generated files.
 - Temporarily modified the lint script to ignore `**/*.d.ts` and `**/*.js`, but ESLint still fails because `.tsx` sources depend on generated modules missing from the TS project.
+- **Note:** Error #8's resolution (scoped tsconfig per package) addressed entrypoint issues but did not resolve the broader generated artifacts problem.
 - Further configuration work pending.
 
 ### Next Steps
 - Investigate creating a lint-specific tsconfig that points to `dist/types` or the emitted outputs.
 - Explore `allowDefaultProject` support via ESLint configuration rather than tsconfig (may require `eslint.config.js` or `.eslintrc` change).
 - As fallback, adjust build process to avoid committing generated files into `src/`.
+- Consider consolidating with Error #8 resolution approach if the generated artifacts can be handled through similar scoped configuration.
 
 ### Prevention
 - Separate build outputs from source directories (use `dist/` or `generated/` outside lint scope).
 - Maintain dedicated ESLint parser configuration aligned with TypeScript project references that include generated artifacts when needed.
+- Apply Error #8's scoped configuration pattern to generated artifacts handling.
 
 ### Error #8: ESLint Project Service Scope Gap
 **Date:** 2025-09-29  
 **Severity:** Medium  
 **Status:** Resolved  
+**Related:** BUG-017 (open) - Both stem from TypeScript project-service/ESLint parser scope issues
 **Error:** ESLint reported `main.tsx was not found by the project service`, blocking the Stage 1 linting milestone.  
 **Root Cause:** The flat config pointed `@typescript-eslint/parser` at project references that excluded React entrypoints and generated JS artifacts, so the parser could not build a program for client files.  
 **Resolution:**
@@ -1846,7 +1855,9 @@ The lint script targets `./src` directly, so ESLint traverses emitted `.d.ts` an
 - Tightened each package `tsconfig.json` to include only TypeScript sources and explicitly include `main.tsx` where needed.
 - Added default-project fallbacks and expanded ignore patterns to skip compiled outputs.
 
-**Prevention:** Keep TypeScript includes aligned with actual source files and avoid linting generated outputs. Update lint configs in lock-step with tsconfig structure changes.
+**Relationship to BUG-017:** Error #8 was a scoped client-entry resolution fix (tsconfig/typed-lint per-package) that addressed missing React entrypoints in the project service. While this resolved the immediate linting milestone blocker, BUG-017 remains open because generated `.d.ts`/`.js` artifacts and lint parser project inclusion still need a separate resolution. Both issues share the same root cause (TypeScript project-service/ESLint parser scope mismatches) but require different fixes.
+
+**Prevention:** Keep TypeScript includes aligned with actual source files and avoid linting generated outputs. Update lint configs in lock-step with tsconfig structure changes. Consider applying the scoped configuration pattern from this resolution to broader generated artifacts handling (see BUG-017).
 
 ## BUG-018: Lifecycle Scheduler Integration
 **Severity:** Info  
