@@ -13,6 +13,9 @@
     "dir": "dist/server",
     "entry": "index.cjs"
   },
+  "reddit": {
+    "api": true
+  },
   "scheduler": {
     "tasks": {
       "game-lifecycle-tick": {

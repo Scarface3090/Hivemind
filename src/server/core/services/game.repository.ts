@@ -2,6 +2,7 @@ import { redis } from '@devvit/web/server';
 import { GamePhase } from '../../../shared/enums.js';
 import type { DraftRecord } from './game.lifecycle.js';
 import type { GameMetadata } from '../../../shared/types/Game.js';
+import type { Guess } from '../../../shared/types/Guess.js';
 import type { Spectrum } from '../../../shared/types/Spectrum.js';
 import { redisKeys } from '../redis/keys.js';
 
@@ -32,6 +33,7 @@ const serializeMetadata = (metadata: GameMetadata): Record<string, string> => ({
   totalParticipants: String(metadata.totalParticipants),
   medianGuess: metadata.medianGuess === null ? 'null' : String(metadata.medianGuess),
   publishedAt: metadata.publishedAt ?? '',
+  redditPost: metadata.redditPost ? JSON.stringify(metadata.redditPost) : '',
 });
 
 export const saveSpectrumCache = async (record: SpectrumCacheRecord): Promise<void> => {
@@ -109,4 +111,74 @@ export const updateGameState = async (
 ): Promise<void> => {
   await removeGameFromStateIndex(gameId, from);
   await addGameToStateIndex(gameId, to, score);
+};
+
+// -----------------------
+// Guess persistence layer
+// -----------------------
+
+const serializeGuess = (guess: Guess): Record<string, string> => ({
+  guessId: guess.guessId,
+  gameId: guess.gameId,
+  userId: guess.userId,
+  username: guess.username,
+  value: String(guess.value),
+  justification: guess.justification,
+  createdAt: guess.createdAt,
+  source: guess.source,
+  redditCommentId: guess.redditCommentId ?? '',
+});
+
+export const saveGuessRecord = async (guess: Guess): Promise<void> => {
+  const key = redisKeys.guessRecord(guess.guessId);
+  await redis.hSet(key, serializeGuess(guess));
+  // Index by game for median queries (sorted by guess value)
+  await redis.zAdd(redisKeys.guessesByGame(guess.gameId), {
+    member: guess.guessId,
+    score: guess.value,
+  });
+  // Index by user to enforce one guess per user per game
+  await redis.hSet(redisKeys.userGuessIndex(guess.gameId), { [guess.userId]: guess.guessId });
+};
+
+export const getGuessById = async (guessId: string): Promise<Record<string, string>> =>
+  redis.hGetAll(redisKeys.guessRecord(guessId));
+
+export const getUserGuessIdForGame = async (gameId: string, userId: string): Promise<string | null> => {
+  const id = await redis.hGet(redisKeys.userGuessIndex(gameId), userId);
+  return id ?? null;
+};
+
+export const getGuessCountForGame = async (gameId: string): Promise<number> =>
+  redis.zCard(redisKeys.guessesByGame(gameId));
+
+export const getMedianForGame = async (
+  gameId: string
+): Promise<{ median: number | null; sampleSize: number }> => {
+  const total = await getGuessCountForGame(gameId);
+  if (total === 0) return { median: null, sampleSize: 0 };
+
+  const midIndexLeft = Math.floor((total - 1) / 2);
+  const midIndexRight = Math.floor(total / 2);
+
+  const range = await redis.zRange(redisKeys.guessesByGame(gameId), midIndexLeft, midIndexRight, {
+    by: 'rank',
+  });
+
+  if (range.length === 1) {
+    const first = range[0];
+    return { median: first ? first.score : null, sampleSize: total };
+  }
+
+  if (range.length === 2) {
+    const first = range[0];
+    const second = range[1];
+    if (!first || !second) {
+      return { median: null, sampleSize: total };
+    }
+    return { median: Math.round((first.score + second.score) / 2), sampleSize: total };
+  }
+
+  // Fallback (should not happen)
+  return { median: null, sampleSize: total };
 };

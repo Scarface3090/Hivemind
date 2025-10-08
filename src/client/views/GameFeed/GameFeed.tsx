@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { getActiveGames } from '../../api/games.js';
 
 const GameFeed = (): JSX.Element => {
@@ -51,7 +52,7 @@ const GameFeed = (): JSX.Element => {
                 <span className="feed-item__median-value">{game.medianGuess ?? '—'}</span>
               </div>
               <div className="feed-item__actions">
-                <button className="pill-button">Join game</button>
+                <Link className="pill-button" to={`/game/${game.gameId}`}>Join game</Link>
               </div>
             </div>
           </article>

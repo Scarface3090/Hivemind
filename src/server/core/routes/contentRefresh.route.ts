@@ -2,6 +2,7 @@ import express from 'express';
 
 import { ensureSpectrumCache, refreshSpectrumCache } from '../services/content.service.js';
 import { processLifecycleTick, processRevealJob } from '../services/game.scheduler.js';
+import { processMedianTick } from '../services/median.service.js';
 
 export const contentRefreshRouter = express.Router();
 
@@ -42,6 +43,19 @@ contentRefreshRouter.post('/internal/scheduler/game-reveal', async (req, res) =>
     res.status(500).json({
       status: 'error',
       message: error instanceof Error ? error.message : 'Reveal job failed',
+    });
+  }
+});
+
+contentRefreshRouter.post('/internal/scheduler/median-tick', async (_req, res) => {
+  try {
+    const result = await processMedianTick();
+    res.json({ status: 'ok', ...result });
+  } catch (error) {
+    console.error('Median tick failed', error);
+    res.status(500).json({
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Median tick failed',
     });
   }
 });

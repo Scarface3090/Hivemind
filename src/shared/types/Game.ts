@@ -24,6 +24,11 @@ export interface GameMetadata {
   totalParticipants: number;
   medianGuess: number | null;
   publishedAt?: string;
+  redditPost?: {
+    postId: string;
+    permalink: string;
+    url: string;
+  };
 }
 
 export interface GameWithGuesses extends GameMetadata {

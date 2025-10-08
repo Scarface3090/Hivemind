@@ -5,6 +5,7 @@ import type { GameMetadata } from '../../../shared/types/Game.js';
 import { MIN_GUESS_VALUE, MAX_GUESS_VALUE } from '../../../shared/constants.js';
 import { timestampNow } from '../../../shared/utils/index.js';
 import { ensureSpectrumCache } from './content.service.js';
+import { createGamePost } from '../post.js';
 import {
   saveDraft,
   getDraft,
@@ -19,6 +20,7 @@ import {
   updateGameState,
   deleteGameMetadata,
 } from './game.repository.js';
+import type { Spectrum } from '../../../shared/types/Spectrum.js';
 
 const DRAFT_TTL_SECONDS = 15 * 60;
 
@@ -29,6 +31,10 @@ export interface DraftRecord {
   secretTarget: number;
   createdAt: string;
   expiresAt: string;
+}
+
+export interface EnrichedDraftRecord extends Omit<DraftRecord, 'spectrumId'> {
+  spectrum: Spectrum;
 }
 
 const pickRandomSpectrumId = async (): Promise<string> => {
@@ -65,10 +71,24 @@ const buildDraft = async (hostUserId: string): Promise<DraftRecord> => {
   };
 };
 
-export const createDraft = async (hostUserId: string): Promise<DraftRecord> => {
+export const createDraft = async (hostUserId: string): Promise<EnrichedDraftRecord> => {
   const draft = await buildDraft(hostUserId);
   await saveDraft(draft, DRAFT_TTL_SECONDS);
-  return draft;
+
+  const spectra = await ensureSpectrumCache();
+  const spectrum = spectra.find((s) => s.id === draft.spectrumId);
+  if (!spectrum) {
+    throw new Error('Failed to find spectrum for draft.');
+  }
+
+  return {
+    draftId: draft.draftId,
+    hostUserId: draft.hostUserId,
+    spectrum,
+    secretTarget: draft.secretTarget,
+    createdAt: draft.createdAt,
+    expiresAt: draft.expiresAt,
+  };
 };
 
 const requireDraft = async (draftId: string): Promise<DraftRecord> => {
@@ -138,6 +158,7 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     totalParticipants,
     medianGuess,
     publishedAt,
+    redditPost,
   } = record;
 
   if (!hostUserId || !hostUsername || !clue || !state) {
@@ -145,6 +166,15 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
   }
 
   const medianGuessValue = medianGuess === 'null' || medianGuess === undefined ? null : Number(medianGuess);
+
+  let parsedRedditPost: GameMetadata['redditPost'];
+  if (redditPost) {
+    try {
+      parsedRedditPost = JSON.parse(redditPost) as GameMetadata['redditPost'];
+    } catch (err) {
+      console.warn(`Game ${gameId} has invalid redditPost metadata`, err);
+    }
+  }
 
   return {
     gameId,
@@ -161,6 +191,7 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     totalParticipants: Number(totalParticipants ?? '0'),
     medianGuess: medianGuessValue,
     publishedAt: publishedAt || parsedTiming.publishedAt || undefined,
+    redditPost: parsedRedditPost,
   };
 };
 
@@ -212,6 +243,9 @@ export const publishGame = async (
   };
 
   try {
+    const redditPost = await createGamePost({ metadata });
+    metadata.redditPost = redditPost;
+
     await saveGameMetadata(metadata);
     await addGameToStateIndex(gameId, GamePhase.Active, end.getTime());
     await enqueueActiveGame(gameId, end.getTime());

@@ -1,6 +1,19 @@
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getActiveGames } from '../../api/games.js';
+import type { GameMetadata } from '../../../shared/types/Game.js';
 
 const HomeScreen = (): JSX.Element => {
+  const {
+    data: activeGamesResponse,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['activeGames', { limit: 3 }],
+    queryFn: () => getActiveGames({ limit: 3 }),
+    staleTime: 10_000,
+  });
+
   return (
     <section className="home-layout">
       <div className="hero-card">
@@ -27,11 +40,61 @@ const HomeScreen = (): JSX.Element => {
             See all
           </Link>
         </header>
-        <p className="surface-muted">
-          Use the feed to discover live games. We&rsquo;ll surface featured matches here soon.
-        </p>
+        {isLoading && (
+          <div className="flex flex-col gap-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="skeleton-card">
+                <div className="skeleton-line" style={{ width: '40%' }} />
+                <div className="skeleton-line" />
+                <div className="skeleton-line" style={{ width: '70%' }} />
+              </div>
+            ))}
+          </div>
+        )}
+        {error && (
+          <p className="surface-muted">
+            Could not load active games. Please try again later.
+          </p>
+        )}
+        {!isLoading && !error && (
+          <>
+            {activeGamesResponse?.games.length === 0 && (
+              <p className="surface-muted">
+                No live games at the moment. Host one to get the hive buzzing!
+              </p>
+            )}
+            {activeGamesResponse && activeGamesResponse.games.length > 0 && (
+              <div className="grid grid-cols-1 gap-4">
+                {activeGamesResponse.games.map((game) => (
+                  <GamePreviewCard key={game.gameId} game={game} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </section>
+  );
+};
+
+interface GamePreviewCardProps {
+  game: GameMetadata;
+}
+
+const GamePreviewCard = ({ game }: GamePreviewCardProps): JSX.Element => {
+  return (
+    <Link to={`/game/${game.gameId}`} className="preview-card-link">
+      <article className="preview-card">
+        <div className="preview-card__meta">
+          <p className="preview-card__host">Hosted by {game.hostUsername}</p>
+          <h4 className="preview-card__title">{game.clue}</h4>
+        </div>
+        <div className="preview-card__metrics">
+          <span>{game.totalParticipants} participants</span>
+          <span className="pill-button text-xs">Join Game</span>
+        </div>
+      </article>
+    </Link>
   );
 };
 

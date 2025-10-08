@@ -1,11 +1,12 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { requestDraft, publishGame } from '../../api/games.js';
 import type { DraftResponse, PublishGameResponse } from '../../../shared/api.js';
 import { DEFAULT_GAME_DURATIONS_MINUTES } from '../../../shared/constants.js';
 
-const HOST_USER_ID = 'host-dev-user';
+// No hardcoded host ID; server uses authenticated context
 
 interface HostFormState {
   clue: string;
@@ -24,6 +25,7 @@ const initialFormState: HostFormState = {
 
 const HostView = (): JSX.Element => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [formState, setFormState] = useState<HostFormState>(initialFormState);
   const [lastDraft, setLastDraft] = useState<DraftResponse | null>(null);
   const [optimisticGame, setOptimisticGame] = useState<PublishGameResponse | null>(null);
@@ -50,7 +52,12 @@ const HostView = (): JSX.Element => {
 
   const draftMutation = useMutation({
     mutationKey: ['host', 'draft'],
-    mutationFn: () => requestDraft({ hostUserId: HOST_USER_ID }),
+    mutationFn: () => requestDraft(),
+    onSuccess: (draft) => {
+      setLastDraft(draft);
+      setStatus('idle');
+      setStatusMessage('Draft ready. Add a clue and publish.');
+    },
   });
 
   const publishMutation = useMutation({
@@ -59,10 +66,21 @@ const HostView = (): JSX.Element => {
     onSuccess: (game) => {
       setOptimisticGame(game);
       void queryClient.invalidateQueries({ queryKey: ['activeGames'] });
+      navigate('/');
     },
   });
 
   const isLoading = draftMutation.isLoading || publishMutation.isLoading;
+
+  // Fetch draft on mount
+  useEffect(() => {
+    if (!lastDraft && !draftMutation.isLoading && status === 'idle') {
+      setStatus('drafting');
+      setStatusMessage('Requesting a fresh spectrum...');
+      draftMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleClueChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFormState((prev) => ({
@@ -104,28 +122,30 @@ const HostView = (): JSX.Element => {
       }
 
       try {
-        setStatus('drafting');
-        setStatusMessage('Requesting a fresh spectrum...');
-        const draft = await draftMutation.mutateAsync();
-        setLastDraft(draft);
+        if (!lastDraft) {
+          setStatus('drafting');
+          setStatusMessage('Preparing your spectrum...');
+          const draft = await draftMutation.mutateAsync();
+          setLastDraft(draft);
+        }
 
         setStatus('publishing');
         setStatusMessage('Publishing your game to the feed...');
-        const published = await publishMutation.mutateAsync({
-          draftId: draft.draftId,
+        await publishMutation.mutateAsync({
+          draftId: (lastDraft ?? (await draftMutation.mutateAsync())).draftId,
           clue: formState.clue.trim(),
           durationMinutes: formState.durationMinutes!,
         });
 
         setStatus('success');
-        setStatusMessage('Game published! It is now live for players.');
+        setStatusMessage('Game published! Redirecting...');
         resetForm();
       } catch (error) {
         setStatus('error');
         setStatusMessage(error instanceof Error ? error.message : 'Failed to publish game. Try again.');
       }
     },
-    [formState, isLoading, publishMutation, resetForm, draftMutation, validateForm]
+    [formState, isLoading, publishMutation, resetForm, draftMutation, validateForm, lastDraft]
   );
 
   const statusDotClass = useMemo(() => {
@@ -149,6 +169,23 @@ const HostView = (): JSX.Element => {
     return statusMessage;
   }, [status, statusMessage]);
 
+  if (draftMutation.isLoading && !lastDraft) {
+    return (
+      <section className="host-layout">
+        <header>
+          <h2 className="text-2xl font-semibold">Host a game</h2>
+          <p className="surface-muted">Generating your spectrum…</p>
+        </header>
+        <div className="surface-card">
+          <div className="host-form__status" aria-live="polite">
+            <span className="host-form__status-dot host-form__status-dot--loading" aria-hidden />
+            <span>Preparing your spectrum…</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="host-layout">
       <header>
@@ -160,6 +197,27 @@ const HostView = (): JSX.Element => {
 
       <div className="surface-card">
         <form className="host-form" onSubmit={submitHostForm} noValidate>
+          {lastDraft && (
+            <div className="host-form__section">
+              <div className="host-form__section-header">
+                <span className="host-form__label">Your spectrum</span>
+                <p className="host-form__description">Players will guess along this spectrum.</p>
+              </div>
+              <div className="host-form__helper">
+                <strong>{lastDraft.spectrum.leftLabel}</strong> ↔{' '}
+                <strong>{lastDraft.spectrum.rightLabel}</strong>
+              </div>
+              <div className="host-form__section-header">
+                <span className="host-form__label">Your secret target</span>
+                <p className="host-form__description">
+                  Your clue should guide players to this value on the spectrum.
+                </p>
+              </div>
+              <div className="host-form__helper">
+                Target: <strong>{lastDraft.secretTarget}</strong>
+              </div>
+            </div>
+          )}
           <div className="host-form__section">
             <div className="host-form__section-header">
               <label className="host-form__label" htmlFor="host-clue">
@@ -178,7 +236,7 @@ const HostView = (): JSX.Element => {
               onChange={handleClueChange}
               rows={3}
               maxLength={160}
-              disabled={isLoading}
+              disabled={isLoading || !lastDraft}
             />
             {formState.errors.clue ? (
               <p className="host-form__error" role="alert">
@@ -222,7 +280,7 @@ const HostView = (): JSX.Element => {
           </div>
 
           <div className="host-form__actions">
-            <button type="submit" className="host-form__cta" disabled={isLoading}>
+            <button type="submit" className="host-form__cta" disabled={isLoading || !lastDraft}>
               <span className="host-form__cta-icon" aria-hidden>
                 🚀
               </span>
@@ -236,8 +294,7 @@ const HostView = (): JSX.Element => {
 
             {lastDraft && (
               <p className="host-form__helper">
-                Draft locked in with secret target <strong>{lastDraft.secretTarget}</strong>. Target stays hidden to
-                players until reveal.
+                Draft locked in. Secret target is hidden from players until reveal.
               </p>
             )}
 

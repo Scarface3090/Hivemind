@@ -1,5 +1,4 @@
-:root {
-  color-scheme: dark;
+@theme {
   --color-reddit-orange: #ff4500;
   --color-reddit-blue: #0079d3;
   --color-dark-gray: #121213;
@@ -7,6 +6,10 @@
   --color-border: rgba(255, 255, 255, 0.08);
   --color-text-muted: rgba(255, 255, 255, 0.7);
   --shadow-card: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
+
+:root {
+  color-scheme: dark;
 }
 
 * {
@@ -19,6 +22,18 @@ body {
   background: radial-gradient(circle at top left, #1f1f1f, #09090a 60%);
   color: rgba(255, 255, 255, 0.92);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Prevent horizontal scrolling on mobile due to overflowing children */
+html {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 a {
@@ -102,6 +117,11 @@ button {
   flex: 1;
 }
 
+/* Ensure internal content cannot exceed the main container width */
+.app-main__content {
+  width: 100%;
+}
+
 .home-layout,
 .feed-layout,
 .host-layout {
@@ -124,6 +144,8 @@ button {
   font-size: 2.4rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  /* Wrap long unbroken strings to avoid horizontal overflow */
+  overflow-wrap: anywhere;
 }
 
 .hero-body {
@@ -238,6 +260,7 @@ button {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .feed-item__footer {
@@ -297,6 +320,85 @@ button {
   border-radius: 9999px;
   /* High-contrast outer ring that preserves the pill shape */
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+/* GuessingView layout: keep content within mobile viewport and safe areas */
+.view {
+  width: 100%;
+}
+
+.view--guessing .container {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.view--guessing .view-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Phaser canvas container respects aspect ratio and never overflows */
+.phaser-canvas {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #111111;
+  position: relative;
+}
+
+/* Guess form basic styling to avoid overflow and ensure readable spacing */
+.guess-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guess-form .label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.guess-form .input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font-size: 1rem;
+}
+
+.guess-form .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primary-button,
+.secondary-button {
+  padding: 10px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.primary-button {
+  background: var(--color-reddit-orange);
+  color: var(--color-dark-gray);
+  border: none;
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .skeleton-card {
@@ -549,6 +651,16 @@ button {
   .feed-item__footer {
     align-items: flex-end;
     justify-content: center;
+  }
+}
+
+/* Mobile safe-area padding adjustments */
+@media (max-width: 639px) {
+  .app-main {
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-top: 24px;
   }
 }
 

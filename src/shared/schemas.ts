@@ -39,6 +39,13 @@ export const gameMetadataSchema = z.object({
   totalParticipants: z.number().int().nonnegative(),
   medianGuess: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE).nullable(),
   publishedAt: z.string().datetime().optional(),
+  redditPost: z
+    .object({
+      postId: z.string().min(1),
+      permalink: z.string().min(1),
+      url: z.string().min(1),
+    })
+    .optional(),
 });
 
 export const guessSchema = z.object({
@@ -106,9 +113,7 @@ export const gameResultsSchema = gameWithGuessesSchema.extend({
   scoreSummary: scoreSummarySchema,
 });
 
-export const draftRequestSchema = z.object({
-  hostUserId: z.string().min(1),
-});
+export const draftRequestSchema = z.object({}).optional().default({});
 
 export const draftResponseSchema = z.object({
   draftId: z.string().min(1),
@@ -147,5 +152,10 @@ export const guessResponseSchema = z.object({
 export const resultsResponseSchema = z.object({
   gameId: z.string().min(1),
   scores: scoreSummarySchema,
+});
+
+export const gamePollingResponseSchema = z.object({
+  game: gameMetadataSchema,
+  median: medianSnapshotSchema,
 });
 

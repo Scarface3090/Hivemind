@@ -3,9 +3,7 @@ import type { GameMetadata, GameResults } from './types/Game.js';
 import type { Guess, MedianSnapshot } from './types/Guess.js';
 import type { ScoreSummary } from './types/ScoreSummary.js';
 
-export interface DraftRequest {
-  hostUserId: string;
-}
+export interface DraftRequest {}
 
 export interface DraftResponse {
   draftId: string;
@@ -51,6 +49,11 @@ export interface ResultsResponse {
 export interface RevealJobPayload {
   gameId: string;
   scheduledAt: string;
+}
+
+export interface GamePollingResponse {
+  game: GameMetadata;
+  median: MedianSnapshot;
 }
 
 export interface InitResponse {

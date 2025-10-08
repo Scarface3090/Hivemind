@@ -85,6 +85,10 @@
   - (2025-10-07 — Confirmed `src/client/App.tsx` routes and `views/*` screens wired via `AppProvider`; verified `HomeScreen`, `GameFeed`, `HostView` in place.)
 - [x] Create `HostView` form flow integrating draft + publish APIs with optimistic UI and validation states *(2025-09-30 — Implemented React Query-backed draft/publish mutations, client-side validation, optimistic feed refresh, and success/error UX messaging.)* (Est. 1.5 dev-days, Owners: Frontend).
   - (2025-10-07 — `HostView` submits to draft/publish endpoints; UI follows tokens and updates feed on success.)
+- [x] Refine `HostView` flow to match GDD: fetch draft on view load to show spectrum context, use authenticated user from Devvit context instead of stub, and navigate to home screen on successful publication (Est. 1 dev-day, Owners: Frontend).
+  - (2025-10-08 — `HostView` now fetches a draft on component mount, relies on server-side user context, and navigates to home screen on successful game publication.)
+- [x] Publish live games as subreddit posts (2025-10-08 — `publishGame` now calls `createGamePost` to submit a Devvit custom post per game, storing post metadata on the game record.)
+- [x] Implement active games preview on `HomeScreen`, fetching a small number of games from the `/api/games/active` endpoint to populate the card view (Est. 0.5 dev-days, Owners: Frontend).
 
 - *Required resources:* Backend and frontend engineers, access to scheduler configuration, design references for host/feed screens, QA reviewer for API contract verification.
 
@@ -95,10 +99,12 @@
 
 #### Sub-steps:
 
-- [ ] Implement guess submission endpoint, per-user enforcement, justification capture, and Redis storage strategy (Est. 2 dev-days, Owners: Backend).
-  - (Not started as of 2025-10-07 — Stage 3 work is pending; no guess submission or results endpoints live yet.)
-- [ ] Build median computation service with 30s cadence, caching, and client polling endpoint (`GET /api/games/{id}`) support (Est. 2 dev-days, Owners: Backend).
-- [ ] Integrate Phaser slider component with React state synchronization, live median indicator, and responsive interaction logic (Est. 2 dev-days, Owners: Frontend/Gameplay).
+- [x] Implement guess submission endpoint, per-user enforcement, justification capture, and Redis storage strategy (Est. 2 dev-days, Owners: Backend).
+  - (2025-10-07 — Implemented `POST /api/games/:gameId/guess` with Zod validation; per-user enforcement via Redis `userGuessIndex(gameId)` hash; guess records saved under `guessRecord(guessId)` and indexed by value in `guessesByGame(gameId)` zset; response returns `MedianSnapshot` computed from the zset. Median cache is refreshed immediately after each guess.)
+- [x] Build median computation service with 30s cadence, caching, and client polling endpoint (`GET /api/games/{id}`) support (Est. 2 dev-days, Owners: Backend).
+  - (2025-10-07 — Added Redis median cache with 30s TTL, `processMedianTick` service, and `/internal/scheduler/median-tick` route; exposed `GET /api/games/:id` returning validated `{ game, median }` payload for client polling.)
+- [x] Integrate Phaser slider component with React state synchronization, live median indicator, and responsive interaction logic (Est. 2 dev-days, Owners: Frontend/Gameplay).
+  - (2025-10-08 — Integrated Phaser-based slider in GuessingView; React component manages game state and polling via React Query, synchronizing the live median value with the Phaser scene. Phaser scene handles slider UI, drag interactions, and emits value changes back to React.)
 - [ ] Create scoring engine computing accuracy, persuasion stub, host score, and persist results payload (Est. 2 dev-days, Owners: Backend).
 - [ ] Deliver `ResultsView` with histogram, accolades, and share actions, matching `hivemind-waffleUI` tokens (Est. 2 dev-days, Owners: Frontend).
 - [ ] Add optional event logging, analytics hooks, and feature flags for persuasion stub toggling (Est. 1-1.5 dev-days, Owners: Full-stack).

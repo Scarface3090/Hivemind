@@ -1864,3 +1864,130 @@ The lint script targets `./src` directly, so ESLint traverses emitted `.d.ts` an
 **Status:** Resolved  
 **Date:** 2025-09-30  
 **Summary:** Documented addition of scheduler tasks (`/internal/scheduler/game-lifecycle-tick`, `/internal/scheduler/game-reveal`) and feed endpoint for active games. No defects observed; entry tracks new functionality to aid QA.
+
+## Bug ID: [BUG-019] - Guessing Slider Dragging Locked to Start Position
+**Severity:** High  
+**Status:** Resolved  
+**Date Reported:** 2025-10-08  
+**Date Resolved:** 2025-10-08  
+**Reporter:** User  
+**Assignee:** AI Agent
+
+### Description
+Players could not drag the guessing slider in `GuessingView`; the handle remained stuck at its initial position, preventing guess submission adjustments.
+
+### Steps to Reproduce
+1. Join an active game and land on `GuessingView`.
+2. Attempt to drag the slider handle.
+3. Observe that the handle snaps back immediately and the displayed value never updates.
+
+### Expected Behavior
+- Slider handle responds to touch/mouse drag and updates the current guess value.
+- Median indicator continues to reflect live updates.
+
+### Actual Behavior
+- Slider events were ignored or re-initialised instantly, locking the handle in place.
+- Current guess value in the form remained stuck at its default.
+
+### Root Cause Analysis
+- The React wrapper re-created the Phaser game whenever component state changed. As React state updated during drag, the Phaser scene was torn down and rebuilt, cancelling the drag interaction.
+- Median updates were applied before the scene was ready, masking the lifecycle issue.
+
+### Resolution
+1. Store the current slider value and median in refs so React state changes no longer trigger Phaser re-mounts.
+2. Limit Phaser game creation to a single mount per `gameId` and reuse the running scene for median updates.
+3. Defer median application until the scene is available, re-applying after POST_STEP when necessary.
+
+### Testing
+- Manually verified slider dragging with mouse and touch input behaves correctly.
+- Confirmed live median updates apply without rebuilding the Phaser scene.
+- Ensured guess submissions use the latest dragged value.
+
+### Prevention
+- Use refs (not state) for values shared between React and Phaser.
+- Avoid including rapidly changing data in effect dependencies that manage Phaser lifecycle.
+- When integrating Phaser with React, isolate scene creation/destruction from UI-driven state updates.
+
+## Bug ID: [BUG-020] - Guess Submission Produced No Response or Feedback
+**Severity:** High  
+**Status:** Resolved  
+**Date Reported:** 2025-10-08  
+**Date Resolved:** 2025-10-08  
+**Reporter:** User  
+**Assignee:** AI Agent
+
+### Description
+Players on the GuessingView tapped `Submit guess`, but nothing appeared to happen. The API call worked; however, the UI showed no confirmation, and form state stayed unchanged, making it look broken.
+
+### Steps to Reproduce
+1. Join an active game and drag the slider to a value.
+2. Enter justification text and press `Submit guess`.
+3. Observe no visual change—button reverts immediately without success or error messaging.
+
+### Expected Behavior
+- Provide immediate feedback when a guess is submitted.
+- Handle errors (e.g., validation, duplicate guess) and inform the player.
+- Reset the justification field after a successful submission.
+
+### Actual Behavior
+- Button briefly disabled but no message displayed.
+- Form remained populated, giving the impression the submission failed.
+- API errors (such as duplicate guess) surfaced only in the console.
+
+### Root Cause Analysis
+- The React component ignored the mutation result and did not expose success or error state to the UI.
+- `useMutation` returned responses silently while the form stayed untouched, leaving players without confirmation.
+
+### Resolution
+1. Wrapped the mutation with explicit `onSuccess`/`onError` handlers to surface feedback messages.
+2. Added local state to display success or error alerts alongside the button.
+3. Reset the justification field on success so players see immediate confirmation and a cleared input.
+
+### Testing
+- Manually submitted valid guesses and confirmed success messaging plus field reset.
+- Triggered duplicate guess scenario to verify the error message renders in the UI.
+
+### Prevention
+- Always wire mutation states to visible UI feedback for player actions.
+- Ensure forms clear or reflect new state after successful submissions.
+- Provide ARIA-friendly status regions for accessibility whenever async actions occur.
+
+## Bug ID: [BUG-021] - Guess Submission Fails Locally with "User context missing"
+**Severity:** High  
+**Status:** Resolved  
+**Date Reported:** 2025-10-08  
+**Date Resolved:** 2025-10-08  
+**Reporter:** User  
+**Assignee:** AI Agent
+
+### Description
+In local development, submitting a guess returned HTTP 400 with message "User context missing" and the frontend showed that error. This blocked testing the join/guess flow outside of Devvit’s production runtime.
+
+### Steps to Reproduce
+1. Start the local server and play through GuessingView.
+2. Click `Submit guess`.
+3. Observe API response `401` with message "User context missing"; UI surfaces that error.
+
+### Expected Behavior
+- Local playtest should allow guesses using a stubbed player identity.
+- Production still requires real Devvit context.
+
+### Actual Behavior
+- Server rejected the request because Devvit context lacks `userId`/`username` during local runs.
+- No fallback identity existed for development, so guessing was impossible.
+
+### Root Cause Analysis
+- `submitGuess` service accessed `context.userId`/`context.username` directly and threw an error if absent. Unlike the route handler, the service lacked the local fallback helper, so dev environment requests always failed.
+
+### Resolution
+1. Added `getEffectiveUser()` helper to `game.guess.ts` mirroring the route logic.
+2. When Devvit context is missing locally, supply deterministic fallback `local-dev-user` / `localdev` identifiers.
+3. Preserve strict enforcement in production by checking `NODE_ENV`.
+
+### Testing
+- Verified local submissions succeed and store the stubbed user.
+- Confirmed duplicate guess scenario still handled correctly.
+
+### Prevention
+- Share context fallback helpers between routes and services to keep behavior consistent.
+- Always consider Devvit context availability when writing server code for local testing.
