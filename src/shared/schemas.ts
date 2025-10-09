@@ -54,7 +54,7 @@ export const guessSchema = z.object({
   userId: z.string().min(1),
   username: z.string().min(1),
   value: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE),
-  justification: z.string().min(1),
+  justification: z.string().min(1).optional(),
   createdAt: z.string().datetime(),
   source: z.nativeEnum(GuessSource),
   redditCommentId: z.string().optional(),

@@ -1,20 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import Phaser from 'phaser';
-import { createPhaserGame } from '../../game/index.js';
 import { getGameById, submitGuess } from '../../api/games.js';
 import type { GamePollingResponse, GuessResponse } from '../../../shared/api.js';
 import { DEFAULT_MEDIAN_REFRESH_SECONDS, MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ApiError } from '../../api/client.js';
+import { SpectrumSlider } from '../../components/SpectrumSlider.js';
+import { useCountdown } from '../../hooks/useCountdown.js';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const GuessingView = (): JSX.Element => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<Phaser.Game | null>(null);
   const currentValueRef = useRef<number>(50);
   const latestMedianRef = useRef<number | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
@@ -31,7 +29,13 @@ const GuessingView = (): JSX.Element => {
     null
   );
 
-  const mutation = useMutation<GuessResponse, unknown, { value: number; justification: string }>({
+  const fallbackEndTime = useMemo(() => new Date(Date.now() + 60_000).toISOString(), []);
+  const game = data?.game;
+  const endTime = game?.timing.endTime ?? fallbackEndTime;
+  const { formatted: countdown, remainingMs } = useCountdown(endTime);
+  const urgent = remainingMs <= 10_000;
+
+  const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
     mutationFn: (payload) => submitGuess(gameId!, payload),
     onMutate: () => {
       setSubmissionFeedback(null);
@@ -60,7 +64,8 @@ const GuessingView = (): JSX.Element => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
-    const justification = showJustification ? (new FormData(form).get('justification')?.toString() ?? '') : undefined;
+    const raw = showJustification ? new FormData(form).get('justification')?.toString() : undefined;
+    const justification = raw && raw.trim().length > 0 ? raw.trim() : undefined;
     mutation.mutate(
       { value: currentValue, justification },
       {
@@ -76,85 +81,6 @@ const GuessingView = (): JSX.Element => {
     setCurrentValue(50);
   }, [gameId]);
 
-  useEffect(() => {
-    const mountTarget = canvasRef.current;
-    if (!mountTarget) return;
-
-    const game = createPhaserGame({ parent: mountTarget });
-    gameRef.current = game;
-
-    const startScene = () => {
-      if (!game.scene.isActive('GuessingScene')) {
-        game.scene.start('GuessingScene', {
-          initialValue: currentValueRef.current,
-          median: latestMedianRef.current,
-        });
-      }
-    };
-
-    game.events.once(Phaser.Core.Events.BOOT, startScene);
-
-    let cleanup: (() => void) | null = null;
-
-    const wireSceneEvents = () => {
-      if (!gameRef.current) return;
-      try {
-        const scene: any = gameRef.current.scene.getScene('GuessingScene');
-        if (scene?.events) {
-          const handler = (value: number) => {
-            updateCurrentValue(value);
-          };
-          scene.events.on('slider:valueChanged', handler);
-          if (typeof scene.setMedian === 'function') {
-            scene.setMedian(latestMedianRef.current);
-          }
-          cleanup = () => {
-            scene.events?.off?.('slider:valueChanged', handler);
-          };
-        }
-      } catch {
-        // Scene may not yet exist; try again after the next frame
-        game.events.once(Phaser.Core.Events.POST_STEP, wireSceneEvents);
-      }
-    };
-
-    game.events.once(Phaser.Core.Events.POST_STEP, wireSceneEvents);
-    game.events.once(Phaser.Core.Events.RUNNER_STEP, wireSceneEvents);
-
-    return () => {
-      try {
-        cleanup?.();
-      } finally {
-        // Destroy the Phaser game and remove the canvas element entirely
-        game.destroy(true);
-
-        if (mountTarget.contains(game.canvas)) {
-          mountTarget.removeChild(game.canvas);
-        }
-
-        gameRef.current = null;
-      }
-    };
-  }, [gameId, updateCurrentValue]);
-
-  // Keep median in sync in scene
-  useEffect(() => {
-    const game = gameRef.current;
-    const medianValue = data?.median?.median;
-    latestMedianRef.current = typeof medianValue === 'number' ? medianValue : null;
-    if (!game) return;
-
-    const applyMedian = () => {
-      try {
-        const scene = game.scene.getScene('GuessingScene') as any;
-        if (scene?.setMedian) scene.setMedian(latestMedianRef.current);
-      } catch {
-        game.events.once(Phaser.Core.Events.POST_STEP, applyMedian);
-      }
-    };
-
-    applyMedian();
-  }, [data?.median?.median]);
 
   if (error instanceof Error) {
     return (
@@ -170,12 +96,41 @@ const GuessingView = (): JSX.Element => {
   return (
     <section className="view view--guessing">
       <div className="container">
-        <header className="view-header">
-          <h2 className="text-xl font-semibold">{data?.game.clue ?? 'Loading game…'}</h2>
-          <div className="surface-muted">Participants: {data?.game.totalParticipants ?? '—'}</div>
+        <header className="feed-item feed-item--inline">
+          <div className="feed-item__top">
+            <span
+              className="chip chip--participants"
+              role="status"
+              aria-live="polite"
+              title="Number of participants"
+            >
+              👥 {game?.totalParticipants ?? '—'}
+            </span>
+            <span
+              className={`chip chip--timer ${urgent ? 'chip--urgent' : ''}`}
+              role="status"
+              aria-live="polite"
+              title="Time remaining"
+            >
+              ⏱ {countdown}
+            </span>
+          </div>
+
+          <div className="feed-item__meta">
+            <p className="feed-item__host">Hosted by {game?.hostUsername ?? '—'}</p>
+            <h2 className="feed-item__title feed-item__title--center">{game?.clue ?? 'Loading game…'}</h2>
+          </div>
+
         </header>
 
-        <div className="phaser-canvas" ref={canvasRef} style={{ width: '100%', aspectRatio: '16 / 9', background: '#111' }} />
+        {game?.spectrum && (
+          <SpectrumSlider
+            spectrum={game.spectrum}
+            value={currentValue}
+            onValueChange={updateCurrentValue}
+            median={data?.median?.median}
+          />
+        )}
 
         <form className="guess-form" onSubmit={handleSubmit} style={{ marginTop: 16 }}>
           <div className="toggle-group" style={{ marginBottom: 16 }}>

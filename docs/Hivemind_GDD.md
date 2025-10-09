@@ -112,3 +112,18 @@ The game operates on an asynchronous, Host-configurable timer.
 * **Progression:** Player Profiles, Achievements, Leaderboards.
 * **Variety:** "Image Mode," "Blitz Mode," Subreddit-Specific Content.
 * **Social:** Team Play, "Challenge a Friend."
+
+
+Option B gives the Phaser component its own dedicated container, making it easier to:
+Add particle effects (sparks, trails when dragging)
+Animate background gradients or pulsing effects
+Show visual feedback (glow, ripples, scaling animations)
+Add decorative elements around the slider (e.g., animated icons at endpoints)
+Future Enhancements You Could Add with Option B:
+Animated spectrum bars that pulse or shimmer
+Particle trails following the slider handle
+Physics-based spring animations when releasing the handle
+Dynamic lighting/glow effects on the spectrum based on slider position
+Interactive label animations (labels could scale, fade, or animate on hover)
+Full-canvas backgrounds with parallax or atmospheric effects
+Celebration effects when submitting a guess

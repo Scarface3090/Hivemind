@@ -33,8 +33,11 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     throw new Error('User context missing');
   }
 
-  // Validate request body
-  const parsed = guessRequestSchema.parse(request);
+  // Validate request body (normalize blank justification to undefined)
+  const normalizedJustification = typeof request.justification === 'string'
+    ? (request.justification.trim().length > 0 ? request.justification.trim() : undefined)
+    : undefined;
+  const parsed = guessRequestSchema.parse({ ...request, justification: normalizedJustification });
 
   // Ensure game exists and is ACTIVE
   const metadata = await getGameById(gameId);
@@ -62,7 +65,7 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
       userId,
       username,
       value: Number(existing.value ?? '0'),
-      justification: existing.justification ?? '',
+      justification: existing.justification || undefined,
       createdAt: existing.createdAt ?? timestampNow(),
       source: (existing.source as GuessSource) ?? GuessSource.Unknown,
       redditCommentId: existing.redditCommentId || undefined,
@@ -78,7 +81,7 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     userId,
     username,
     value: parsed.value,
-    justification: parsed.justification ?? '',
+    justification: parsed.justification,
     createdAt: timestampNow(),
     source: GuessSource.InApp,
   };

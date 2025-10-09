@@ -123,7 +123,7 @@ const serializeGuess = (guess: Guess): Record<string, string> => ({
   userId: guess.userId,
   username: guess.username,
   value: String(guess.value),
-  justification: guess.justification,
+  justification: guess.justification ?? '',
   createdAt: guess.createdAt,
   source: guess.source,
   redditCommentId: guess.redditCommentId ?? '',

@@ -6,7 +6,7 @@ export interface Guess {
   userId: string;
   username: string;
   value: number;
-  justification: string;
+  justification?: string;
   createdAt: string;
   source: GuessSource;
   redditCommentId?: string;

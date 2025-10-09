@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getActiveGames } from '../../api/games.js';
-import { SpectrumPill } from '../../components/SpectrumPill.js';
-import { useCountdown } from '../../hooks/useCountdown.js';
 import type { GameMetadata } from '../../../shared/types/Game.js';
+import { ActiveGameCard } from '../../components/ActiveGameCard.js';
 
 const HomeScreen = (): JSX.Element => {
   const {
@@ -43,12 +42,12 @@ const HomeScreen = (): JSX.Element => {
           </Link>
         </header>
         {isLoading && (
-          <div className="flex flex-col gap-4">
+          <div className="feed-list">
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="skeleton-card">
-                <div className="skeleton-line" style={{ width: '40%' }} />
+                <div className="skeleton-line" style={{ width: '30%' }} />
                 <div className="skeleton-line" />
-                <div className="skeleton-line" style={{ width: '70%' }} />
+                <div className="skeleton-line" style={{ width: '60%' }} />
               </div>
             ))}
           </div>
@@ -66,9 +65,9 @@ const HomeScreen = (): JSX.Element => {
               </p>
             )}
             {activeGamesResponse && activeGamesResponse.games.length > 0 && (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="feed-list">
                 {activeGamesResponse.games.map((game) => (
-                  <GamePreviewCard key={game.gameId} game={game} />
+                  <ActiveGameCard key={game.gameId} game={game} />
                 ))}
               </div>
             )}
@@ -76,45 +75,6 @@ const HomeScreen = (): JSX.Element => {
         )}
       </div>
     </section>
-  );
-};
-
-interface GamePreviewCardProps {
-  game: GameMetadata;
-}
-
-const GamePreviewCard = ({ game }: GamePreviewCardProps): JSX.Element => {
-  const { formatted, remainingMs } = useCountdown(game.timing.endTime);
-  const urgent = remainingMs <= 10_000;
-  return (
-    <Link to={`/game/${game.gameId}`} className="preview-card-link">
-      <article className="preview-card">
-        <div className="preview-card__meta">
-          <p className="preview-card__host">Hosted by {game.hostUsername}</p>
-          <SpectrumPill spectrum={game.spectrum} className="mt-1" />
-          <h4 className="preview-card__title">{game.clue}</h4>
-        </div>
-        <div className="preview-card__metrics flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-zinc-900 text-zinc-200 px-2 py-1 text-xs"
-            role="status"
-            aria-live="polite"
-            title="Number of participants"
-          >
-            👥 {game.totalParticipants}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-mono ${urgent ? 'bg-red-900 text-white' : 'bg-slate-900 text-slate-200'}`}
-            role="status"
-            aria-live="polite"
-            title="Time remaining"
-          >
-            ⏱ {formatted}
-          </span>
-          <span className="pill-button text-xs">Join Game</span>
-        </div>
-      </article>
-    </Link>
   );
 };
 

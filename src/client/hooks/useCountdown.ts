@@ -17,10 +17,10 @@ export function useCountdown(endTime: string): {
   const isExpired = remainingMs === 0;
 
   const formatted = useMemo(() => {
-    const totalSeconds = Math.floor(remainingMs / 1000);
-    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-    const seconds = String(totalSeconds % 60).padStart(2, '0');
-    return `${minutes}:${seconds}`;
+    const totalMinutes = Math.floor(remainingMs / 60000);
+    const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+    const minutes = String(totalMinutes % 60).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }, [remainingMs]);
 
   return { formatted, remainingMs, isExpired };

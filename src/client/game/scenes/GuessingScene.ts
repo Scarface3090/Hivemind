@@ -4,6 +4,8 @@ import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 type GuessingSceneData = {
   initialValue?: number;
   median?: number | null;
+  leftLabel?: string;
+  rightLabel?: string;
 };
 
 export class GuessingScene extends Phaser.Scene {
@@ -12,9 +14,14 @@ export class GuessingScene extends Phaser.Scene {
   private medianLine!: Phaser.GameObjects.Rectangle;
   private valueText!: Phaser.GameObjects.Text;
   private medianText!: Phaser.GameObjects.Text;
+  private leftLabelText!: Phaser.GameObjects.Text;
+  private rightLabelText!: Phaser.GameObjects.Text;
+  private spectrumBar!: Phaser.GameObjects.Graphics;
 
   private currentValue: number = 50;
   private currentMedian: number | null = null;
+  private leftLabel: string = '';
+  private rightLabel: string = '';
 
   constructor() {
     super('GuessingScene');
@@ -23,13 +30,18 @@ export class GuessingScene extends Phaser.Scene {
   init(data: GuessingSceneData): void {
     if (typeof data.initialValue === 'number') this.currentValue = data.initialValue;
     if (typeof data.median === 'number') this.currentMedian = data.median;
+    if (typeof data.leftLabel === 'string') this.leftLabel = data.leftLabel;
+    if (typeof data.rightLabel === 'string') this.rightLabel = data.rightLabel;
   }
 
   create(): void {
     this.cameras.main.setBackgroundColor('#111111');
 
-    // Slider track
-    this.track = this.add.rectangle(0, 0, 600, 6, 0x888888, 1).setOrigin(0.5, 0.5);
+    // Spectrum gradient bar
+    this.spectrumBar = this.add.graphics();
+
+    // Slider track (invisible, just for hit detection)
+    this.track = this.add.rectangle(0, 0, 600, 6, 0x888888, 0).setOrigin(0.5, 0.5);
 
     // Slider handle
     this.handle = this.add.circle(0, 0, 14, 0xffcc00).setInteractive({ useHandCursor: true, draggable: true });
@@ -37,7 +49,7 @@ export class GuessingScene extends Phaser.Scene {
     // Median indicator
     this.medianLine = this.add.rectangle(0, 0, 2, 28, 0x00e5ff, 1).setOrigin(0.5, 0.5);
 
-    // Labels
+    // Value and median labels
     this.valueText = this.add.text(0, 0, `${this.currentValue}`, {
       fontFamily: 'Inter, Arial',
       fontSize: '20px',
@@ -50,12 +62,57 @@ export class GuessingScene extends Phaser.Scene {
       color: '#00e5ff',
     }).setOrigin(0.5, 0);
 
+    // Spectrum labels
+    this.leftLabelText = this.add.text(0, 0, this.leftLabel, {
+      fontFamily: 'Inter, Arial',
+      fontSize: '12px',
+      color: '#cccccc',
+    }).setOrigin(0, 0.5);
+
+    this.rightLabelText = this.add.text(0, 0, this.rightLabel, {
+      fontFamily: 'Inter, Arial',
+      fontSize: '12px',
+      color: '#cccccc',
+    }).setOrigin(1, 0.5);
+
+    // Depth ordering to ensure interactivity and visibility
+    this.spectrumBar.setDepth(0);
+    this.track.setDepth(1);
+    this.leftLabelText.setDepth(1);
+    this.rightLabelText.setDepth(1);
+    this.medianLine.setDepth(2);
+    this.medianText.setDepth(2);
+    this.handle.setDepth(3);
+    this.valueText.setDepth(3);
+
     // Input
     this.input.setDraggable(this.handle, true);
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number) => {
       if (gameObject !== this.handle) return;
       const { left, right } = this.track.getBounds();
       const clampedX = Phaser.Math.Clamp(dragX, left, right);
+      this.handle.setX(clampedX);
+      this.currentValue = this.positionToValue(clampedX, left, right);
+      this.valueText.setText(`${this.currentValue}`);
+      this.layout();
+      this.emitValueChanged(this.currentValue);
+    });
+
+    // Make track clickable and draggable for quick jumps
+    this.track.setInteractive({ useHandCursor: true });
+    this.track.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const { left, right } = this.track.getBounds();
+      const clampedX = Phaser.Math.Clamp(pointer.x, left, right);
+      this.handle.setX(clampedX);
+      this.currentValue = this.positionToValue(clampedX, left, right);
+      this.valueText.setText(`${this.currentValue}`);
+      this.layout();
+      this.emitValueChanged(this.currentValue);
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown) return;
+      const { left, right } = this.track.getBounds();
+      const clampedX = Phaser.Math.Clamp(pointer.x, left, right);
       this.handle.setX(clampedX);
       this.currentValue = this.positionToValue(clampedX, left, right);
       this.valueText.setText(`${this.currentValue}`);
@@ -74,6 +131,14 @@ export class GuessingScene extends Phaser.Scene {
     this.layout();
   }
 
+  public setLabels(left: string, right: string): void {
+    this.leftLabel = left ?? '';
+    this.rightLabel = right ?? '';
+    if (this.leftLabelText) this.leftLabelText.setText(this.leftLabel);
+    if (this.rightLabelText) this.rightLabelText.setText(this.rightLabel);
+    this.layout();
+  }
+
   private valueToPosition(value: number, left: number, right: number): number {
     const t = (value - MIN_GUESS_VALUE) / (MAX_GUESS_VALUE - MIN_GUESS_VALUE);
     return Phaser.Math.Linear(left, right, t);
@@ -88,23 +153,52 @@ export class GuessingScene extends Phaser.Scene {
   private layout(): void {
     const { width, height } = this.scale;
     const canvasCenterX = width / 2;
-    const maxWidth = Math.max(280, Math.floor(width * 0.9));
-    const trackWidth = Math.min(720, maxWidth);
-    const verticalPadding = Math.max(24, height * 0.12);
-    const sliderY = Phaser.Math.Clamp(height / 2, verticalPadding, height - verticalPadding);
+    const canvasCenterY = height / 2;
+    
+    // Use full width minus padding for spectrum
+    const horizontalPadding = Math.max(16, width * 0.05);
+    const trackWidth = width - (horizontalPadding * 2);
+    const trackHeight = 6;
+    
+    // Center everything vertically
+    const sliderY = canvasCenterY;
+    const labelY = sliderY + 18;
 
     this.cameras.resize(width, height);
 
-    this.track.setPosition(canvasCenterX, sliderY).setDisplaySize(trackWidth, 6);
+    // Render spectrum gradient bar
+    this.spectrumBar.clear();
+    const left = canvasCenterX - trackWidth / 2;
+    const right = canvasCenterX + trackWidth / 2;
+    
+    // Create gradient effect using multiple rectangles
+    const gradientSteps = 50;
+    for (let i = 0; i < gradientSteps; i++) {
+      const t = i / (gradientSteps - 1);
+      const x = left + (trackWidth * t);
+      const stepWidth = trackWidth / gradientSteps;
+      
+      // Interpolate from orange (#FFBF00) to blue (#0079D3)
+      const r = Math.floor(255 * (1 - t) + 0 * t);
+      const g = Math.floor(191 * (1 - t) + 121 * t);
+      const b = Math.floor(0 * (1 - t) + 211 * t);
+      const color = (r << 16) | (g << 8) | b;
+      
+      this.spectrumBar.fillStyle(color, 0.6);
+      this.spectrumBar.fillRect(x, sliderY - trackHeight / 2, stepWidth, trackHeight);
+    }
+
+    // Set track for hit detection
+    this.track.setPosition(canvasCenterX, sliderY).setDisplaySize(trackWidth, trackHeight);
 
     const bounds = this.track.getBounds();
-    const left = bounds.left;
-    const right = bounds.right;
+    const trackLeft = bounds.left;
+    const trackRight = bounds.right;
 
-    const handleX = this.valueToPosition(this.currentValue, left, right);
+    const handleX = this.valueToPosition(this.currentValue, trackLeft, trackRight);
     this.handle.setPosition(handleX, sliderY);
 
-    const medianX = this.currentMedian == null ? null : this.valueToPosition(this.currentMedian, left, right);
+    const medianX = this.currentMedian == null ? null : this.valueToPosition(this.currentMedian, trackLeft, trackRight);
     if (medianX == null) {
       this.medianLine.setVisible(false);
       this.medianText.setVisible(false);
@@ -114,6 +208,15 @@ export class GuessingScene extends Phaser.Scene {
     }
 
     this.valueText.setPosition(handleX, sliderY - 16);
+
+    // Position spectrum labels at track edges with a small inset to prevent clipping
+    const labelInset = 6;
+    this.leftLabelText.setText(this.leftLabel || '')
+      .setPosition(trackLeft + labelInset, labelY)
+      .setVisible(true);
+    this.rightLabelText.setText(this.rightLabel || '')
+      .setPosition(trackRight - labelInset, labelY)
+      .setVisible(true);
 
     // Ensure values stay within bounds even if resize shrinks the track dramatically
     this.currentValue = Phaser.Math.Clamp(this.currentValue, MIN_GUESS_VALUE, MAX_GUESS_VALUE);

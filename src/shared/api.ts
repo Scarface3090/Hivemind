@@ -31,7 +31,7 @@ export interface ActiveGamesResponse {
 
 export interface GuessRequest {
   value: number;
-  justification: string;
+  justification?: string;
 }
 
 export interface GuessResponse {
