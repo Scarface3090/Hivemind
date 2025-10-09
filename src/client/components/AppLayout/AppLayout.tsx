@@ -1,29 +1,21 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
-const navigation = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/feed', label: 'Game Feed' },
-  { to: '/host', label: 'Host' },
-];
-
 const AppLayout = (): JSX.Element => {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-header__inner">
-          <h1 className="app-brand">Hivemind</h1>
-          <nav className="app-nav">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `app-nav__link ${isActive ? 'app-nav__link--active' : ''}`}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+        <div className="app-header__inner app-header__inner--centered">
+          <nav className="app-nav app-nav--left">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => `app-nav__link ${isActive ? 'app-nav__link--active' : ''}`}
+            >
+              Home
+            </NavLink>
           </nav>
+          <h1 className="app-brand app-brand--centered">Hivemind</h1>
+          <div className="app-nav app-nav--right" aria-hidden="true" />
         </div>
       </header>
 

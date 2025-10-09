@@ -18,6 +18,7 @@ const GuessingView = (): JSX.Element => {
   const currentValueRef = useRef<number>(50);
   const latestMedianRef = useRef<number | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
+  const [showJustification, setShowJustification] = useState<boolean>(false);
 
   const { data, isLoading, error, refetch } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
@@ -59,7 +60,7 @@ const GuessingView = (): JSX.Element => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
-    const justification = new FormData(form).get('justification')?.toString() ?? '';
+    const justification = showJustification ? (new FormData(form).get('justification')?.toString() ?? '') : undefined;
     mutation.mutate(
       { value: currentValue, justification },
       {
@@ -177,10 +178,31 @@ const GuessingView = (): JSX.Element => {
         <div className="phaser-canvas" ref={canvasRef} style={{ width: '100%', aspectRatio: '16 / 9', background: '#111' }} />
 
         <form className="guess-form" onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-          <div className="justification-group">
-            <label htmlFor="justification" className="label">Justification</label>
-            <textarea id="justification" name="justification" required rows={3} className="input" placeholder="Why did you choose this value?" />
+          <div className="toggle-group" style={{ marginBottom: 16 }}>
+            <label className="toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={showJustification} 
+                onChange={(e) => setShowJustification(e.target.checked)}
+                style={{ width: 20, height: 20 }}
+                aria-label="Enable justification input"
+              />
+              <span style={{ color: '#fff', fontSize: '14px' }}>Add justification</span>
+            </label>
           </div>
+
+          {showJustification && (
+            <div className="justification-group" style={{ marginBottom: 16 }}>
+              <label htmlFor="justification" className="label">Justification</label>
+              <textarea 
+                id="justification" 
+                name="justification" 
+                rows={3} 
+                className="input" 
+                placeholder="Why did you choose this value?" 
+              />
+            </div>
+          )}
 
           <div className="current-value" aria-live="polite">Your guess: {currentValue}</div>
 

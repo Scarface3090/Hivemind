@@ -141,7 +141,7 @@ export const activeGamesResponseSchema = z.object({
 
 export const guessRequestSchema = z.object({
   value: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE),
-  justification: z.string().min(1),
+  justification: z.string().optional(),
 });
 
 export const guessResponseSchema = z.object({

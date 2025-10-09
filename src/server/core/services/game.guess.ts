@@ -78,7 +78,7 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     userId,
     username,
     value: parsed.value,
-    justification: parsed.justification,
+    justification: parsed.justification ?? '',
     createdAt: timestampNow(),
     source: GuessSource.InApp,
   };
