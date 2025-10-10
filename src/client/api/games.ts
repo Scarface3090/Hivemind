@@ -8,6 +8,7 @@ import type {
   GuessRequest,
   GuessResponse,
 } from '../../shared/api.js';
+import type { GameResults } from '../../shared/types/Game.js';
 import { apiClient } from './client.js';
 
 const API_BASE = '/api/games';
@@ -36,5 +37,8 @@ export const submitGuess = (
   gameId: string,
   payload: GuessRequest
 ): Promise<GuessResponse> => apiClient.post<GuessResponse, GuessRequest>(`${API_BASE}/${gameId}/guess`, payload);
+
+export const getGameResults = (gameId: string): Promise<GameResults> =>
+  apiClient.get<GameResults>(`${API_BASE}/${gameId}/results`);
 
 

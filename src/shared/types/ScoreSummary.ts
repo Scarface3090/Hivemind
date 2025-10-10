@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AccoladeType, ClueClarityRating } from '../enums.js';
 
 export interface ScoreBreakdown {
@@ -29,11 +30,18 @@ export interface ScoreSummary {
   targetValue: number;
   finalMedian: number;
   histogram: ScoreHistogramBucket[];
+  accolades: AccoladeSummary;
 }
 
 export interface ScoreHistogramBucket {
   rangeStart: number;
   rangeEnd: number;
   count: number;
+}
+
+export interface AccoladeSummary {
+  bestAccuracy?: PlayerScoreSummary['userId'];
+  topPersuasion?: PlayerScoreSummary['userId'];
+  mostContrarian?: PlayerScoreSummary['userId'];
 }
 

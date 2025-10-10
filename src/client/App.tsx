@@ -5,6 +5,7 @@ import HomeScreen from './views/HomeScreen/HomeScreen.js';
 import GameFeed from './views/GameFeed/GameFeed.js';
 import HostView from './views/HostView/HostView.js';
 import GuessingView from './views/GuessingView/GuessingView.js';
+import ResultsView from './views/ResultsView/ResultsView.js';
 import { AppProvider } from './providers/AppProvider.js';
 
 const RouteErrorBoundary = (): JSX.Element => {
@@ -61,6 +62,10 @@ const router = createHashRouter([
       {
         path: 'game/:gameId',
         element: <GuessingView />,
+      },
+      {
+        path: 'results/:gameId',
+        element: <ResultsView />,
       },
       {
         path: '*',

@@ -12,9 +12,10 @@ import { validate } from '../../core/validation/index.js';
 import { createDraft, publishGame } from '../services/game.lifecycle.js';
 import { getActiveGamesFeed } from '../services/game.feed.js';
 import { submitGuess } from '../services/game.guess.js';
-import { guessRequestSchema, guessResponseSchema, gamePollingResponseSchema } from '../../../shared/schemas.js';
+import { guessRequestSchema, guessResponseSchema, gamePollingResponseSchema, gameResultsSchema } from '../../../shared/schemas.js';
 import { getGameById } from '../services/game.lifecycle.js';
 import { getMedianSnapshotCached } from '../services/median.service.js';
+import { getGameResults } from '../services/scoring.service.js';
 
 const router = express.Router();
 
@@ -116,6 +117,23 @@ router.get('/api/games/:gameId', async (req, res) => {
     res
       .status(500)
       .json({ status: 'error', message: error instanceof Error ? error.message : 'Failed to load game' });
+  }
+});
+
+router.get('/api/games/:gameId/results', async (req, res) => {
+  try {
+    const { gameId } = req.params as { gameId: string };
+    const results = await getGameResults(gameId);
+    if (!results) {
+      res.status(404).json({ status: 'error', message: 'Results not found' });
+      return;
+    }
+    const payload = gameResultsSchema.parse(results);
+    res.json(payload);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: 'error', message: error instanceof Error ? error.message : 'Failed to load results' });
   }
 });
 

@@ -37,5 +37,6 @@ export interface GameWithGuesses extends GameMetadata {
 
 export interface GameResults extends GameWithGuesses {
   scoreSummary: ScoreSummary;
+  finalizedAt: string;
 }
 

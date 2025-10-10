@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getGameById, submitGuess } from '../../api/games.js';
 import type { GamePollingResponse, GuessResponse } from '../../../shared/api.js';
 import { DEFAULT_MEDIAN_REFRESH_SECONDS, MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
@@ -34,6 +34,7 @@ const GuessingView = (): JSX.Element => {
   const endTime = game?.timing.endTime ?? fallbackEndTime;
   const { formatted: countdown, remainingMs } = useCountdown(endTime);
   const urgent = remainingMs <= 10_000;
+  const queryClient = useQueryClient();
 
   const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
     mutationFn: (payload) => submitGuess(gameId!, payload),
@@ -41,6 +42,10 @@ const GuessingView = (): JSX.Element => {
       setSubmissionFeedback(null);
     },
     onSuccess: () => {
+      // After submitting a guess, refresh feeds and stop game polling, then navigate home
+      queryClient.invalidateQueries({ queryKey: ['activeGames'] });
+      queryClient.cancelQueries({ queryKey: ['game', gameId] });
+      queryClient.removeQueries({ queryKey: ['game', gameId] });
       navigate('/', { replace: true });
     },
     onError: (err) => {
@@ -66,20 +71,19 @@ const GuessingView = (): JSX.Element => {
     const form = e.currentTarget as HTMLFormElement;
     const raw = showJustification ? new FormData(form).get('justification')?.toString() : undefined;
     const justification = raw && raw.trim().length > 0 ? raw.trim() : undefined;
-    mutation.mutate(
-      { value: currentValue, justification },
-      {
-        onSuccess: () => {
-          form.reset();
-        },
-      }
-    );
+    mutation.mutate({ value: currentValue, justification });
   };
 
   useEffect(() => {
     currentValueRef.current = 50;
     setCurrentValue(50);
   }, [gameId]);
+
+  useEffect(() => {
+    if (data?.game.state === 'REVEAL') {
+      navigate(`/results/${data.game.gameId}`, { replace: true });
+    }
+  }, [data?.game.state, data?.game.gameId, navigate]);
 
 
   if (error instanceof Error) {

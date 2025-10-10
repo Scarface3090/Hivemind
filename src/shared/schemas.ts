@@ -107,10 +107,16 @@ export const scoreSummarySchema = z.object({
   targetValue: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE),
   finalMedian: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE),
   histogram: z.array(scoreHistogramBucketSchema),
+  accolades: z.object({
+    bestAccuracy: z.string().optional(),
+    topPersuasion: z.string().optional(),
+    mostContrarian: z.string().optional(),
+  }),
 });
 
 export const gameResultsSchema = gameWithGuessesSchema.extend({
   scoreSummary: scoreSummarySchema,
+  finalizedAt: z.string().datetime(),
 });
 
 export const draftRequestSchema = z.object({}).optional().default({});

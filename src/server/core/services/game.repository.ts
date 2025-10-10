@@ -1,7 +1,7 @@
 import { redis } from '@devvit/web/server';
 import { GamePhase } from '../../../shared/enums.js';
 import type { DraftRecord } from './game.lifecycle.js';
-import type { GameMetadata } from '../../../shared/types/Game.js';
+import type { GameMetadata, GameResults } from '../../../shared/types/Game.js';
 import type { Guess } from '../../../shared/types/Guess.js';
 import type { Spectrum } from '../../../shared/types/Spectrum.js';
 import { redisKeys } from '../redis/keys.js';
@@ -181,4 +181,23 @@ export const getMedianForGame = async (
 
   // Fallback (should not happen)
   return { median: null, sampleSize: total };
+};
+
+export const getGuessIdsForGame = async (gameId: string): Promise<string[]> => {
+  const entries = await redis.zRange(redisKeys.guessesByGame(gameId), 0, -1, { by: 'rank' });
+  return entries.map((entry) => entry.member);
+};
+
+export const getGuessUpvoteScore = async (_guess: Guess): Promise<number> => {
+  // TODO: integrate Reddit API for actual upvote counts. Stub returns zero for now.
+  return 0;
+};
+
+export const saveGameResults = async (results: GameResults): Promise<void> => {
+  await redis.set(redisKeys.gameResults(results.gameId), JSON.stringify(results));
+};
+
+export const getStoredGameResults = async (gameId: string): Promise<GameResults | null> => {
+  const value = await redis.get(redisKeys.gameResults(gameId));
+  return value ? (JSON.parse(value) as GameResults) : null;
 };

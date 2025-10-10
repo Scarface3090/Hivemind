@@ -44,6 +44,7 @@ export type GameDetailResponse = GameResults;
 export interface ResultsResponse {
   gameId: string;
   scores: ScoreSummary;
+  finalizedAt: string;
 }
 
 export interface RevealJobPayload {

@@ -20,6 +20,8 @@ export const redisKeys = {
   userGuessIndex: (gameId: string) => buildKey('games', 'guesses', 'by-user', gameId), // hash: userId -> guessId
   // Median cache
   medianCache: (gameId: string) => buildKey('games', 'median', 'cache', gameId),
+  // Results
+  gameResults: (gameId: string) => buildKey('games', 'results', gameId),
 } as const;
 
 export type RedisKey = (typeof redisKeys)[keyof typeof redisKeys];

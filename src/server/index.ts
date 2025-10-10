@@ -136,6 +136,7 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
 app.use(router);
 app.use(contentRefreshRouter);
 app.use(gameRouter);
+// TODO: Mount resultsRouter when results APIs are implemented
 
 // 404 logging middleware (after routes)
 app.use((req, res) => {
