@@ -45,3 +45,9 @@ export interface AccoladeSummary {
   mostContrarian?: PlayerScoreSummary['userId'];
 }
 
+export interface GameResultsViewer {
+  isHost: boolean;
+  guessValue?: number;
+  score?: PlayerScoreSummary | HostScoreSummary;
+}
+

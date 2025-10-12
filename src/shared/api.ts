@@ -74,3 +74,14 @@ export interface DecrementResponse {
   postId: string;
   count: number;
 }
+
+// Dev tools: simulate guesses
+export interface SimulateGuessesRequest {
+  count?: number;
+  stdDev?: number;
+}
+
+export interface SimulateGuessesResponse {
+  inserted: number;
+  sample: number[];
+}

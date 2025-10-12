@@ -1,6 +1,6 @@
 import type { Spectrum } from './Spectrum.js';
 import type { Guess } from './Guess.js';
-import type { ScoreSummary } from './ScoreSummary.js';
+import type { ScoreSummary, GameResultsViewer } from './ScoreSummary.js';
 import type { GamePhase } from '../enums.js';
 
 export interface GameTiming {
@@ -38,5 +38,6 @@ export interface GameWithGuesses extends GameMetadata {
 export interface GameResults extends GameWithGuesses {
   scoreSummary: ScoreSummary;
   finalizedAt: string;
+  viewer?: GameResultsViewer;
 }
 

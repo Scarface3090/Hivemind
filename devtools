@@ -1,0 +1,38 @@
+The code determines if it's a dev or prod build using **`import.meta.env.DEV`**, which is a Vite-specific environment variable that's automatically set at build time:
+
+## How it works:
+
+1. **Dev mode** (`npm run dev`):
+   - Vite sets `import.meta.env.DEV = true`
+   - `import.meta.env.PROD = false`
+   - The dev controls render in `ActiveGameCard` because of this condition:
+   ```typescript
+   {import.meta.env.DEV && (
+     // dev controls here
+   )}
+   ```
+
+2. **Production build** (`npm run build`):
+   - Vite sets `import.meta.env.DEV = false`
+   - `import.meta.env.PROD = true`
+   - During the build process, Vite's tree-shaking removes the entire dev controls block since the condition is statically false
+   - The compiled production bundle literally doesn't contain this code
+
+## Server-side guard:
+
+The server uses a different check because it doesn't use Vite:
+
+```typescript
+if (process.env.NODE_ENV !== 'production' || process.env.DEVTOOLS_ENABLED === 'true') {
+  app.use('/api/dev', devRouter);
+}
+```
+
+- `NODE_ENV` is set by your environment (typically `development` in local dev, `production` in deployment)
+- In production, unless you explicitly set `DEVTOOLS_ENABLED=true`, the `/api/dev` routes aren't even mounted
+
+## Summary:
+
+- **Client**: `import.meta.env.DEV` (Vite build-time constant)
+- **Server**: `process.env.NODE_ENV` (runtime environment variable)
+- **Result**: Dev tools exist only in development; production builds have zero trace of them

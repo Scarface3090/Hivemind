@@ -128,7 +128,28 @@ router.get('/api/games/:gameId/results', async (req, res) => {
       res.status(404).json({ status: 'error', message: 'Results not found' });
       return;
     }
-    const payload = gameResultsSchema.parse(results);
+    // Attach viewer context
+    const { userId } = getEffectiveUser();
+    let viewer: any | undefined;
+    if (userId) {
+      const isHost = results.hostUserId === userId;
+      if (isHost) {
+        viewer = {
+          isHost: true,
+          score: results.scoreSummary.host,
+        };
+      } else {
+        const player = results.scoreSummary.players.find((p) => p.userId === userId);
+        const guess = results.guesses.find((g) => g.userId === userId);
+        viewer = {
+          isHost: false,
+          guessValue: guess?.value,
+          score: player,
+        };
+      }
+    }
+
+    const payload = gameResultsSchema.parse({ ...results, viewer });
     res.json(payload);
   } catch (error) {
     res

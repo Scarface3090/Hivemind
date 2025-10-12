@@ -114,9 +114,16 @@ export const scoreSummarySchema = z.object({
   }),
 });
 
+export const gameResultsViewerSchema = z.object({
+  isHost: z.boolean(),
+  guessValue: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE).optional(),
+  score: z.union([playerScoreSummarySchema, hostScoreSummarySchema]).optional(),
+});
+
 export const gameResultsSchema = gameWithGuessesSchema.extend({
   scoreSummary: scoreSummarySchema,
   finalizedAt: z.string().datetime(),
+  viewer: gameResultsViewerSchema.optional(),
 });
 
 export const draftRequestSchema = z.object({}).optional().default({});
@@ -163,5 +170,21 @@ export const resultsResponseSchema = z.object({
 export const gamePollingResponseSchema = z.object({
   game: gameMetadataSchema,
   median: medianSnapshotSchema,
+});
+
+// Dev tools: simulate guesses
+export const simulateGuessesRequestSchema = z
+  .object({
+    count: z.number().int().min(1).max(5000).optional(),
+    stdDev: z.number().min(1).max(50).optional(),
+  })
+  .optional()
+  .default({});
+
+export const simulateGuessesResponseSchema = z.object({
+  inserted: z.number().int().nonnegative(),
+  sample: z
+    .array(z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE))
+    .max(10),
 });
 

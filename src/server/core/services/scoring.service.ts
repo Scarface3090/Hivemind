@@ -9,6 +9,7 @@ import {
   MIN_GUESS_VALUE,
 } from '../../../shared/constants.js';
 import type { GameMetadata, GameResults } from '../../../shared/types/Game.js';
+import type { GameResultsViewer } from '../../../shared/types/ScoreSummary.js';
 import type { Guess } from '../../../shared/types/Guess.js';
 import type {
   AccoladeSummary,
