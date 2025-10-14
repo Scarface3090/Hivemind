@@ -100,11 +100,12 @@ export function ActiveGameCard({ game }: { game: GameMetadata }): JSX.Element {
                     headers: { 'Content-Type': 'application/json', ...(headers || {}) },
                     body: JSON.stringify({ count, stdDev }),
                   });
-                  const data = await res.json().catch(() => ({} as any));
-                  if (!res.ok) throw new Error((data as any)?.message || 'Failed to simulate');
-                  setStatus(`Simulated ${(data as any)?.inserted ?? count} guesses`);
-                } catch (err: any) {
-                  setStatus(err?.message || 'Simulation failed');
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error((data as { message?: string })?.message || 'Failed to simulate');
+                  setStatus(`Simulated ${(data as { inserted?: number })?.inserted ?? count} guesses`);
+                } catch (err) {
+                  const message = err instanceof Error ? err.message : 'Simulation failed';
+                  setStatus(message);
                 } finally {
                   setBusy(false);
                 }
@@ -125,12 +126,13 @@ export function ActiveGameCard({ game }: { game: GameMetadata }): JSX.Element {
                     method: 'POST',
                     headers: { ...(headers || {}) },
                   });
-                  const data = await res.json().catch(() => ({} as any));
-                  if (!res.ok) throw new Error((data as any)?.message || 'Failed to force reveal');
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error((data as { message?: string })?.message || 'Failed to force reveal');
                   setStatus('Reveal triggered');
                   navigate(`/results/${game.gameId}`);
-                } catch (err: any) {
-                  setStatus(err?.message || 'Force reveal failed');
+                } catch (err) {
+                  const message = err instanceof Error ? err.message : 'Force reveal failed';
+                  setStatus(message);
                 } finally {
                   setBusy(false);
                 }

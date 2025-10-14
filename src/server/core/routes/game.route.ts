@@ -70,7 +70,7 @@ router.post('/api/games', validate(publishGameRequestSchema), async (req, res) =
 router.get('/api/games/active', async (req, res) => {
   try {
     const { cursor, limit } = req.query as { cursor?: string; limit?: string };
-    const options: any = {};
+    const options: { cursor?: string; limit?: number } = {};
     if (cursor !== undefined) options.cursor = cursor;
     if (limit !== undefined) options.limit = Number(limit);
     const result = await getActiveGamesFeed(options);
@@ -130,7 +130,7 @@ router.get('/api/games/:gameId/results', async (req, res) => {
     }
     // Attach viewer context
     const { userId } = getEffectiveUser();
-    let viewer: any | undefined;
+    let viewer: { isHost: boolean; score?: number; rank?: number } | undefined;
     if (userId) {
       const isHost = results.hostUserId === userId;
       if (isHost) {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AccoladeType, ClueClarityRating } from '../enums.js';
 
 export interface ScoreBreakdown {

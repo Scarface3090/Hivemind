@@ -3,6 +3,7 @@ import type { GameMetadata, GameResults } from './types/Game.js';
 import type { Guess, MedianSnapshot } from './types/Guess.js';
 import type { ScoreSummary } from './types/ScoreSummary.js';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface DraftRequest {}
 
 export interface DraftResponse {

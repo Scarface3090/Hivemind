@@ -30,15 +30,18 @@ export class ApiClient {
   ): Promise<Response> {
     const url = this.buildUrl(path, searchParams);
     const requestId = Math.random().toString(36).slice(2, 8);
-    // eslint-disable-next-line no-console
     console.log('[API]', requestId, '→', method, url, { body, headers });
+    
+    // Only include JSON_HEADERS for methods that can have a body (not GET)
+    const requestHeaders: HeadersInit = 
+      method !== 'GET'
+        ? { ...JSON_HEADERS, ...headers }
+        : { ...headers };
+    
     const init: RequestInit = {
       method,
-      headers: {
-        ...JSON_HEADERS,
-        ...headers,
-      },
-      signal,
+      headers: requestHeaders,
+      ...(signal && { signal }),
     };
 
     if (body !== undefined && method !== 'GET') {
@@ -46,7 +49,6 @@ export class ApiClient {
     }
 
     const response = await fetch(url, init).catch((err) => {
-      // eslint-disable-next-line no-console
       console.error('[API]', requestId, '✖ fetch failed', err);
       throw err;
     });
@@ -54,12 +56,10 @@ export class ApiClient {
     const payload = isJson ? await response.json() : await response.text();
 
     if (!response.ok) {
-      // eslint-disable-next-line no-console
       console.error('[API]', requestId, '✖', response.status, response.statusText, payload);
       throw new ApiError(response.statusText || 'Request failed', response.status, payload);
     }
 
-    // eslint-disable-next-line no-console
     console.log('[API]', requestId, '✓', response.status, payload);
     return payload as Response;
   }

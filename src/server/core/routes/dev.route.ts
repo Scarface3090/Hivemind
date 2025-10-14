@@ -72,7 +72,7 @@ router.post('/games/:gameId/simulate', async (req, res) => {
         value,
         createdAt: timestampNow(),
         source: GuessSource.InApp,
-      } as any);
+      });
     }
 
     await computeAndCacheMedian(game.gameId);

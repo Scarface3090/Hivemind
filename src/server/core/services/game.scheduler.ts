@@ -1,6 +1,7 @@
 import { scheduler } from '@devvit/web/server';
 import { GamePhase } from '../../../shared/enums.js';
 import type { RevealJobPayload } from '../../../shared/api.js';
+import { revealJobPayloadSchema } from '../../../shared/schemas.js';
 import { timestampNow } from '../../../shared/utils/index.js';
 import {
   pullActiveGamesForReveal,
@@ -29,7 +30,7 @@ export const processLifecycleTick = async (): Promise<LifecycleTickResult> => {
 
     await scheduler.runJob({
       name: 'game-reveal',
-      data: payload,
+      data: payload as unknown as Record<string, string>,
       runAt: new Date(payload.scheduledAt),
     });
   }
@@ -42,13 +43,25 @@ interface RevealJobResult {
 }
 
 export const processRevealJob = async (rawPayload: unknown): Promise<RevealJobResult> => {
-  const parsed = rawPayload as RevealJobPayload | undefined;
-  if (!parsed?.gameId) {
+  // Validate the payload structure using Zod schema
+  const parseResult = revealJobPayloadSchema.safeParse(rawPayload);
+  
+  if (!parseResult.success) {
+    console.error('[game-scheduler] Invalid reveal job payload:', {
+      errors: parseResult.error.errors,
+      receivedPayload: rawPayload,
+    });
     return { processed: false };
   }
 
-  const metadata = await getGameById(parsed.gameId);
+  const payload: RevealJobPayload = parseResult.data;
+
+  const metadata = await getGameById(payload.gameId);
   if (!metadata || metadata.state !== GamePhase.Reveal) {
+    console.warn('[game-scheduler] Game not in Reveal state or not found:', {
+      gameId: payload.gameId,
+      currentState: metadata?.state,
+    });
     return { processed: false };
   }
 

@@ -79,8 +79,7 @@ const HostView = (): JSX.Element => {
       setStatusMessage('Requesting a fresh spectrum...');
       draftMutation.mutate();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Intentionally empty deps - run only on mount
 
   const handleClueChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFormState((prev) => ({

@@ -43,9 +43,9 @@ const GuessingView = (): JSX.Element => {
     },
     onSuccess: () => {
       // After submitting a guess, refresh feeds and stop game polling, then navigate home
-      queryClient.invalidateQueries({ queryKey: ['activeGames'] });
-      queryClient.cancelQueries({ queryKey: ['game', gameId] });
-      queryClient.removeQueries({ queryKey: ['game', gameId] });
+      void queryClient.invalidateQueries({ queryKey: ['activeGames'] });
+      void queryClient.cancelQueries({ queryKey: ['game', gameId] });
+      void queryClient.removeQueries({ queryKey: ['game', gameId] });
       navigate('/', { replace: true });
     },
     onError: (err) => {

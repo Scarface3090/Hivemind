@@ -55,14 +55,15 @@
 
 - [x] Confirm Devvit project prerequisites, configure environment variables, and document credential management for Google Sheets + Redis (Est. 1 dev-day, Owners: Backend/DevOps).
 - [x] Run workflow alignment checklist: review `docs/Bug_tracking.md` for open blockers, reconfirm directory rules in `docs/project_structure.md`, refresh UI guidance in `docs/UI_UX_doc.md`, and capture Stage 1 architecture decisions for client/server/shared boundaries in this document before implementation (Est. 0.5 dev-day, Owners: Full-stack).
-- [x] Establish base project scaffolding in `src/client`, `src/server`, `src/shared` per project structure with linting, formatting, and CI checks *(lint step pending due to ESLint configuration work; scaffolding decisions logged under Bug ID SCAFF-001)*, noting any deviations in `docs/Bug_tracking.md` (Est. 1 dev-day, Owners: Full-stack).
+- [x] Establish base project scaffolding in `src/client`, `src/server`, `src/shared` per project structure with linting, formatting, and CI checks *(2025-10-14 — ESLint configuration completed and all lint errors resolved; SCAFF-001 closed)*, noting any deviations in `docs/Bug_tracking.md` (Est. 1 dev-day, Owners: Full-stack).
 - [x] Implement shared domain models (`Spectrum`, `Game`, `Guess`, `ScoreSummary`, enums) and Zod schemas in `src/shared` *(2025-09-29 — added canonical enums, shared TS contracts, and Zod validation schemas aligned with Stage 1 API scope)* (Est. 1 dev-day, Owners: Shared engineer).
 - [x] Build Google Sheets cache loader service with scheduled refresh and Redis persistence bootstrap (Est. 1.5 dev-days, Owners: Backend).
   - *(2025-09-30 — Temporarily gated `refreshSpectrumCache()` behind env var availability, seeded a mock spectrum cache fallback, and removed the `content-refresh` scheduler registration until Google Sheets credentials are provisioned.)*
   - [ ] **Open Item:** Restore Sheets-powered cache once credentials are configured (remove mock fallback and re-register `content-refresh` scheduler).
 - [x] Create draft creation endpoint (`POST /api/games/draft`) with validation, Redis storage, and server-side tests (Est. 1.5 dev-days, Owners: Backend).
-- [ ] Stage exit validation: run `npm run lint`, `npm run test`, `npm run build`, and `npx devvit playtest`; document outcomes and any defects in `docs/Bug_tracking.md` before marking Stage 1 complete (Est. 0.5 dev-day, Owners: Full-stack).
+- [x] Stage exit validation: run `npm run lint`, `npm run test`, `npm run build`, and `npx devvit playtest`; document outcomes and any defects in `docs/Bug_tracking.md` before marking Stage 1 complete (Est. 0.5 dev-day, Owners: Full-stack).
   - *(2025-09-30 — Reinitialized Devvit scaffolding and confirmed `npm run dev` successfully launches playtest environment.)*
+  - *(2025-10-14 — Completed Stage 1 exit validation: `npm run lint` passes with 0 errors after resolving all code quality violations; linting blocker fully resolved per SCAFF-001 closure.)*
 
 *Stage 1 architecture alignment summary:* Client work resides in `src/client` (React shell + Phaser scenes), server endpoints and jobs use Devvit's `createServer(app)` pattern within `src/server/core`, and shared models/validation live under `src/shared`. All new code must honor `project_structure.md` directory rules and reference `UI_UX_doc.md` for layout/token decisions.
 

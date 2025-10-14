@@ -43,8 +43,9 @@ This document tracks bugs, issues, and their resolutions throughout the developm
 
 - **Entry ID:** SCAFF-001
 - **Summary:** Documented scaffolding baseline for Stage 1 Task "Establish base project scaffolding".
-- **Details:** Created client/server/shared directory structure with placeholder files to align with `project_structure.md`. Removed legacy Phaser bootstrap and reset client app shell pending design implementation. Recorded lack of lint baseline pending ESLint configuration work.
+- **Details:** Created client/server/shared directory structure with placeholder files to align with `project_structure.md`. Removed legacy Phaser bootstrap and reset client app shell pending design implementation. ESLint configuration work completed 2025-10-14; all code quality violations resolved (prefer-const, no-explicit-any, no-floating-promises, unused directives). Stage 1 linting milestone complete.
 - **Status:** Resolved
+- **Date Closed:** 2025-10-14
 - Code quality improvements
 - Nice-to-have features
 
@@ -1901,6 +1902,115 @@ The lint script targets `./src` directly, so ESLint traverses emitted `.d.ts` an
 **Relationship to BUG-017:** Error #8 was a scoped client-entry resolution fix (tsconfig/typed-lint per-package) that addressed missing React entrypoints in the project service. While this resolved the immediate linting milestone blocker, BUG-017 remains open because generated `.d.ts`/`.js` artifacts and lint parser project inclusion still need a separate resolution. Both issues share the same root cause (TypeScript project-service/ESLint parser scope mismatches) but require different fixes.
 
 **Prevention:** Keep TypeScript includes aligned with actual source files and avoid linting generated outputs. Update lint configs in lock-step with tsconfig structure changes. Consider applying the scoped configuration pattern from this resolution to broader generated artifacts handling (see BUG-017).
+
+## Bug ID: [SCAFF-001-FINAL] - ESLint Configuration Completion and Code Quality Resolution
+**Severity:** Medium
+**Status:** Resolved
+**Date Reported:** 2025-09-29
+**Date Resolved:** 2025-10-14
+**Reporter:** AI Agent
+**Assignee:** AI Agent
+
+### Description
+Stage 1 Task "Establish base project scaffolding" noted linting was "pending due to ESLint configuration work" (Bug ID SCAFF-001). While ESLint configuration was functional, the codebase had numerous code quality violations that prevented `npm run lint` from passing, blocking Stage 1 exit criteria.
+
+### Steps to Reproduce
+1. Run `npm run lint`
+2. Observe exit code 1 with multiple ESLint errors:
+   - prefer-const violations (reassigned variables)
+   - @typescript-eslint/no-explicit-any (untyped any usage)
+   - @typescript-eslint/no-floating-promises (unawaited promises)
+   - no-empty (empty catch blocks)
+   - Unused eslint-disable directives
+   - Missing react-hooks plugin errors
+
+### Expected Behavior
+- `npm run lint` should pass with exit code 0
+- Stage 1 exit criteria should be met
+- Code should follow TypeScript best practices
+
+### Actual Behavior
+- `npm run lint` failed with 13 problems (9 errors, 4 warnings)
+- Stage 1 blocked by linting failures
+- Code quality issues throughout client and server code
+
+### Root Cause Analysis
+The issue was **not** an ESLint configuration problem (that was resolved in Error #8). The blocker was standard code quality violations in the codebase:
+1. **Client-side issues**: Improper `any` types, unawaited promises, reassigned `let` variables, unused disable directives
+2. **Server-side issues**: `any` types in route handlers and services, empty catch blocks, unused disable directives
+3. **Shared code issues**: Empty interface, unused disable directives
+4. **Test code issues**: `any` types in mock data
+
+### Resolution
+Fixed all lint violations systematically across the codebase:
+
+**Client fixes (`src/client/`):**
+- Changed `let title` to `const title` in RouteErrorBoundary
+- Replaced `any` event handlers with typed `Event | CustomEvent`
+- Removed unsafe window type assertions, used proper event listener types
+- Added `void` operator to floating promises in GuessingView
+- Removed all unused eslint-disable directives
+- Fixed error handling with proper type narrowing
+
+**Server fixes (`src/server/`):**
+- Typed route handler query parameters explicitly
+- Added proper type annotations for viewer context objects
+- Fixed empty catch blocks with comments explaining intentional silence
+- Typed game lifecycle timing object instead of `any`
+- Removed all unused console.log disable directives
+
+**Test fixes (`src/server/tests/`):**
+- Removed `as any` type assertions from mock data
+- Ensured mock objects match expected types without casting
+
+**Shared fixes (`src/shared/`):**
+- Added explicit disable comment for legitimately empty DraftRequest interface
+- Removed unused disable directive from ScoreSummary.ts
+
+**Additional fixes:**
+- Fixed no-constant-binary-expression in median calculation (proper parentheses)
+- Removed non-existent react-hooks/exhaustive-deps disable comment (plugin not installed)
+
+### Testing
+- ✅ Verified `npm run lint` passes with exit code 0
+- ✅ Confirmed 0 errors and 0 warnings
+- ✅ All files properly typed and follow best practices
+- ✅ Stage 1 exit criteria now satisfied
+
+### Files Modified
+- `/src/client/App.tsx` - Fixed const/any/event handler issues
+- `/src/client/api/client.ts` - Removed unused disable directives
+- `/src/client/components/ActiveGameCard.tsx` - Typed error handlers
+- `/src/client/main.tsx` - Removed unused disable directives
+- `/src/client/views/GuessingView/GuessingView.tsx` - Added void to promises
+- `/src/client/views/HostView/HostView.tsx` - Removed invalid plugin directive
+- `/src/server/core/routes/dev.route.ts` - Removed any cast
+- `/src/server/core/routes/game.route.ts` - Typed query params and viewer
+- `/src/server/core/services/game.lifecycle.ts` - Typed timing, fixed catch blocks
+- `/src/server/core/services/scoring.service.ts` - Fixed binary expression
+- `/src/server/index.ts` - Removed unused disable directives
+- `/src/server/tests/game.test.ts` - Removed any casts
+- `/src/shared/api.ts` - Added explicit disable for empty interface
+- `/src/shared/types/ScoreSummary.ts` - Removed unused directive
+
+### Prevention
+- **Always run `npm run lint` before marking tasks complete**
+- **Fix all lint errors immediately, don't disable rules**
+- **Use proper TypeScript types instead of `any`**
+- **Handle promises properly (await or void operator)**
+- **Only disable lint rules when absolutely necessary with explanation**
+- **Keep unused disable directives clean**
+
+### Related Issues
+- Completes SCAFF-001 from 2025-09-29
+- Satisfies Stage 1 exit criteria requirement for `npm run lint`
+- Distinct from BUG-017 (generated file parsing) which remains open
+
+### Impact
+- Stage 1 scaffolding task now fully complete
+- Linting blocker fully resolved
+- Code quality significantly improved
+- Stage 1 exit validation can proceed
 
 ## BUG-018: Lifecycle Scheduler Integration
 **Severity:** Info  

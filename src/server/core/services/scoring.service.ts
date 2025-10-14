@@ -138,7 +138,7 @@ const computeFinalMedian = (guesses: Guess[]): number => {
   const sorted = [...guesses].sort((a, b) => a.value - b.value);
   const mid = Math.floor(sorted.length / 2);
   if (sorted.length % 2 === 1) return sorted[mid]?.value ?? 0;
-  return Math.round((sorted[mid - 1]?.value ?? 0 + sorted[mid]?.value ?? 0) / 2);
+  return Math.round(((sorted[mid - 1]?.value ?? 0) + (sorted[mid]?.value ?? 0)) / 2);
 };
 
 const finalizeScoreSummary = (

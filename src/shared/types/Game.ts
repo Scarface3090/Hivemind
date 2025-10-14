@@ -9,7 +9,6 @@ export interface GameTiming {
   revealAt?: string;
   createdAt: string;
   updatedAt?: string;
-  publishedAt?: string;
 }
 
 export interface GameMetadata {

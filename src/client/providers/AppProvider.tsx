@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { PropsWithChildren, useMemo } from 'react';
+import { PropsWithChildren, useState } from 'react';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -12,7 +12,8 @@ const createQueryClient = () =>
   });
 
 export const AppProvider = ({ children }: PropsWithChildren): JSX.Element => {
-  const queryClient = useMemo(() => createQueryClient(), []);
+  // Use useState to create a stable QueryClient instance that persists across remounts
+  const [queryClient] = useState(() => createQueryClient());
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };

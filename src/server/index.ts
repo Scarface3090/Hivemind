@@ -16,10 +16,8 @@ app.use(express.text());
 // Basic request logging
 app.use((req, _res, next) => {
   const start = Date.now();
-  // eslint-disable-next-line no-console
   console.log('[SERVER] →', req.method, req.url, { headers: req.headers['content-type'] });
   req.on('close', () => {
-    // eslint-disable-next-line no-console
     console.log('[SERVER] ⤺ closed', req.method, req.url, `${Date.now() - start}ms`);
   });
   next();
@@ -142,7 +140,6 @@ app.use('/api/dev', devRouter);
 
 // 404 logging middleware (after routes)
 app.use((req, res) => {
-  // eslint-disable-next-line no-console
   console.warn('[SERVER] 404 Not Found', req.method, req.url);
   res.status(404).json({ status: 'error', message: 'Not Found', path: req.url });
 });

@@ -13,7 +13,6 @@ export default defineConfig([
       '**/build/**',
       'eslint.config.js',
       '**/*.d.ts',
-      '**/*.js',
       '**/*.js.map',
       '**/vite.config.ts',
       'devvit.config.ts',

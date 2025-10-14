@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { GamePhase } from '../../../shared/enums.js';
 import type { PublishGameRequest, RevealJobPayload } from '../../../shared/api.js';
-import type { GameMetadata } from '../../../shared/types/Game.js';
+import type { GameMetadata, GameTiming } from '../../../shared/types/Game.js';
 import { MIN_GUESS_VALUE, MAX_GUESS_VALUE } from '../../../shared/constants.js';
 import { timestampNow } from '../../../shared/utils/index.js';
 import { ensureSpectrumCache } from './content.service.js';
@@ -56,10 +56,11 @@ const randomTargetValue = (): number =>
 
 const buildDraft = async (hostUserId: string): Promise<DraftRecord> => {
   const draftId = randomUUID();
-  const createdAt = timestampNow();
+  const now = Date.now();
+  const createdAt = new Date(now).toISOString();
   const spectrumId = await pickRandomSpectrumId();
 
-  const expiresAt = new Date(Date.now() + DRAFT_TTL_SECONDS * 1000).toISOString();
+  const expiresAt = new Date(now + DRAFT_TTL_SECONDS * 1000).toISOString();
 
   return {
     draftId,
@@ -129,10 +130,10 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     throw new Error('Stored spectrum is no longer available.');
   }
 
-  let parsedTiming: any | undefined;
+  let parsedTiming: GameTiming | undefined;
   if (record.timing) {
     try {
-      parsedTiming = JSON.parse(record.timing);
+      parsedTiming = JSON.parse(record.timing) as GameTiming;
     } catch (err) {
       if (err instanceof SyntaxError) {
         throw new Error(`Game ${gameId} timing JSON is invalid.`);
@@ -190,8 +191,8 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     },
     totalParticipants: Number(totalParticipants ?? '0'),
     medianGuess: medianGuessValue,
-    publishedAt: publishedAt || parsedTiming.publishedAt || undefined,
-    redditPost: parsedRedditPost,
+    ...(publishedAt && publishedAt !== '' ? { publishedAt } : {}),
+    ...(parsedRedditPost ? { redditPost: parsedRedditPost } : {}),
   };
 };
 
@@ -217,12 +218,13 @@ export const publishGame = async (
   const start = new Date(now);
   const end = new Date(start.getTime() + request.durationMinutes * 60_000);
 
-  const timestamps = {
+  const publishedAt = timestampNow();
+  const timing: GameTiming = {
     startTime: start.toISOString(),
     endTime: end.toISOString(),
+    revealAt: end.toISOString(),
     createdAt: draft.createdAt,
     updatedAt: timestampNow(),
-    publishedAt: timestampNow(),
   };
 
   const metadata: GameMetadata = {
@@ -233,13 +235,10 @@ export const publishGame = async (
     state: GamePhase.Active,
     spectrum,
     secretTarget: draft.secretTarget,
-    timing: {
-      ...timestamps,
-      revealAt: end.toISOString(),
-    },
+    timing,
     totalParticipants: 0,
     medianGuess: null,
-    publishedAt: timestamps.publishedAt,
+    publishedAt,
   };
 
   try {
@@ -255,13 +254,19 @@ export const publishGame = async (
     // Best-effort rollback to keep system consistent
     try {
       await deleteGameMetadata(gameId);
-    } catch {}
+    } catch {
+      // Ignore rollback errors
+    }
     try {
       await removeGameFromStateIndex(gameId, GamePhase.Active);
-    } catch {}
+    } catch {
+      // Ignore rollback errors
+    }
     try {
       await removeFromActiveGameSchedule(gameId);
-    } catch {}
+    } catch {
+      // Ignore rollback errors
+    }
     // Do not attempt to restore the draft here; if deleteDraft already happened, it's fine.
     throw error;
   }
@@ -295,10 +300,21 @@ export const transitionGameState = async (
   nextState: GamePhase,
   nextScore: number
 ): Promise<void> => {
+  // Validate state transition
+  if (metadata.state === nextState) {
+    throw new Error(`Game is already in ${nextState} state`);
+  }
+
   await updateGameState(metadata.gameId, metadata.state, nextState, nextScore);
-  metadata.state = nextState;
-  metadata.timing.updatedAt = timestampNow();
-  await saveGameMetadata(metadata);
+
+  // Re-fetch metadata to ensure we have the latest state
+  const updatedMetadata = await getGameById(metadata.gameId);
+  if (!updatedMetadata) {
+    throw new Error('Game not found after state transition');
+  }
+
+  // Update the passed-in object so caller sees the changes
+  Object.assign(metadata, updatedMetadata);
 };
 
 export const buildRevealJobPayload = (metadata: GameMetadata): RevealJobPayload => ({

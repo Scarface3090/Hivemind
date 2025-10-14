@@ -11,7 +11,7 @@ import { AppProvider } from './providers/AppProvider.js';
 const RouteErrorBoundary = (): JSX.Element => {
   const error = useRouteError();
 
-  let title = 'Router Error';
+  const title = 'Router Error';
   let details = '';
 
   if (isRouteErrorResponse(error)) {
@@ -28,7 +28,6 @@ const RouteErrorBoundary = (): JSX.Element => {
     }
   }
 
-  // eslint-disable-next-line no-console
   console.error('[ROUTER] Route error', error);
 
   return (
@@ -78,20 +77,19 @@ const router = createHashRouter([
 const App = (): JSX.Element => {
   useEffect(() => {
     // Basic router diagnostics once on mount
-    // eslint-disable-next-line no-console
     console.log('[ROUTER] Initializing router with routes', router.routes.map((r) => r.path));
 
     // Capture router navigation errors (React Router emits to console by default; we add clarity)
-    const handleRouterError = (e: any) => {
-      // eslint-disable-next-line no-console
-      console.error('[ROUTER] Error event', e?.detail ?? e);
+    const handleRouterError = (e: Event | CustomEvent) => {
+      const detail = 'detail' in e ? e.detail : null;
+      console.error('[ROUTER] Error event', detail ?? e);
     };
 
-    (window as any).addEventListener?.('rr:error', handleRouterError);
+    window.addEventListener('rr:error', handleRouterError as EventListener);
 
     // Cleanup function to remove event listener and prevent memory leaks
     return () => {
-      (window as any).removeEventListener?.('rr:error', handleRouterError);
+      window.removeEventListener('rr:error', handleRouterError as EventListener);
     };
   }, []); // Empty dependency array ensures this runs only once
 

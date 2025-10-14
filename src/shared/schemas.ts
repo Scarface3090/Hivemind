@@ -188,3 +188,8 @@ export const simulateGuessesResponseSchema = z.object({
     .max(10),
 });
 
+export const revealJobPayloadSchema = z.object({
+  gameId: z.string().min(1),
+  scheduledAt: z.string().datetime(),
+});
+

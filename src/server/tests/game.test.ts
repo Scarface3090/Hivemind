@@ -52,7 +52,7 @@ describe('Scoring Service', () => {
       },
       totalParticipants: 2,
       medianGuess: 60,
-    } as any);
+    });
 
     mockedRepository.getGuessIdsForGame.mockResolvedValue(['guess-1', 'guess-2']);
     mockedRepository.getGuessById.mockImplementation(async (id: string) => {
@@ -121,7 +121,7 @@ describe('Scoring Service', () => {
           hostUsername: 'host',
           breakdown: { guessingScore: 50, persuasionScore: 0, totalScore: 50 },
           participantCount: 0,
-          clueClarityRating:  'EXCELLENT' as any,
+          clueClarityRating:  'EXCELLENT',
         },
         players: [],
         targetValue: 50,
@@ -130,7 +130,7 @@ describe('Scoring Service', () => {
         accolades: {},
       },
       finalizedAt: new Date().toISOString(),
-    } as any);
+    });
 
     const res = await getGameResults('game-2');
     expect(res).not.toBeNull();
