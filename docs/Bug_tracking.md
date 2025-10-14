@@ -107,6 +107,49 @@ This document tracks bugs, issues, and their resolutions throughout the developm
 
 ## Resolved Issues
 
+## Bug ID: [BUG-022] - Histogram Renders as Black Screen in Results View
+**Severity:** Critical
+**Status:** Resolved
+**Date Reported:** 2025-10-13
+**Date Resolved:** 2025-10-13
+**Reporter:** User
+**Assignee:** AI Agent
+
+### Description
+The histogram in the `ResultsView` was not rendering, appearing only as a black screen. This made the results of a game impossible to view.
+
+### Root Cause Analysis
+The issue had two primary root causes that occurred in sequence:
+
+1.  **React/Phaser Race Condition:** The initial problem was a race condition where the React component (`HistogramPhaser.tsx`) would receive data props before the Phaser scene (`HistogramScene.ts`) was initialized and ready. This caused data to be lost and the scene to render with empty or stale data.
+
+2.  **Incorrect Phaser API Usage:** After fixing the race condition, a deeper bug was revealed. The custom `roundedRect` function within `HistogramScene.ts` was using an incorrect method name to draw curves (`quadraticCurveTo`, and subsequently `quadraticBezierTo`). Neither of these methods exist on a Phaser 3.88.2 `Graphics` object for path creation. This threw a `TypeError` during the `draw` call, which aborted rendering after the screen was cleared, resulting in the black screen.
+
+3.  **Build Caching:** During debugging, fixes were not appearing in the user's test environment because old, cached build artifacts (`.js` files) were being served. A full, clean build was required to load the corrected code.
+
+### Resolution
+The issue was resolved in three stages:
+
+1.  **Deferred Update Queue:** Implemented a "holding area" using a `useRef` hook in `HistogramPhaser.tsx`. This queued incoming data until the Phaser scene was ready, resolving the race condition.
+
+2.  **Corrected Phaser API Call:** Replaced the entire faulty custom `roundedRect` function in `HistogramScene.ts` with a single call to the correct, built-in Phaser method: `this.gfx.fillRoundedRect(x, y, w, h, r)`.
+
+3.  **Forced Clean Build:** Instructed the user to stop the playtest server, delete the `dist` directory, and run a fresh build to ensure all code changes were correctly loaded.
+
+### Testing
+- Manually verified that the histogram now renders correctly after a game ends.
+- The fix was confirmed by the user after performing a clean build and re-testing the application.
+
+### Prevention
+- **API Verification:** Do not assume API method names. Always verify with the official documentation for the specific library version in use (`phaser@3.88.2`).
+- **Simplify When Possible:** Prefer built-in library functions (like `fillRoundedRect`) over complex custom implementations.
+- **Clean Builds:** When a fix doesn't appear to work, perform a full, clean build (e.g., `rm -rf dist && npm run build`) and clear browser cache to eliminate caching as a variable.
+
+### Files Modified
+- `src/client/components/HistogramPhaser.tsx`
+- `src/client/game/scenes/HistogramScene.ts`
+
+
 ### Error #1: Incorrect Directory Structure for React Components
 **Date:** Initial development phase  
 **Severity:** High  

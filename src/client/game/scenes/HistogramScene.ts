@@ -132,18 +132,7 @@ export class HistogramScene extends Phaser.Scene {
 
   private roundedRect(x: number, y: number, w: number, h: number, r: number, color: number, alpha: number): void {
     this.gfx.fillStyle(color, alpha);
-    this.gfx.beginPath();
-    this.gfx.moveTo(x + r, y);
-    this.gfx.lineTo(x + w - r, y);
-    this.gfx.quadraticCurveTo(x + w, y, x + w, y + r);
-    this.gfx.lineTo(x + w, y + h - r);
-    this.gfx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    this.gfx.lineTo(x + r, y + h);
-    this.gfx.quadraticCurveTo(x, y + h, x, y + h - r);
-    this.gfx.lineTo(x, y + r);
-    this.gfx.quadraticCurveTo(x, y, x + r, y);
-    this.gfx.closePath();
-    this.gfx.fillPath();
+    this.gfx.fillRoundedRect(x, y, w, h, r);
   }
 
   private drawMarker(x: number, top: number, bottom: number, color: number): void {
@@ -152,5 +141,3 @@ export class HistogramScene extends Phaser.Scene {
     this.gfx.fillRect(x - 1.5, top, 3, bottom - top);
   }
 }
-
-

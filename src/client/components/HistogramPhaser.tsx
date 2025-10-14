@@ -10,14 +10,18 @@ type Props = {
   className?: string;
 };
 
+// This type represents the data packet for the Phaser scene
+type HistogramSceneConfig = Omit<Props, 'className'>;
+
 export default function HistogramPhaser({ buckets, target, median, viewerGuess, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const pendingUpdateRef = useRef<HistogramSceneConfig | null>(null);
 
+  // Effect 1: Manages Phaser game instance lifecycle
   useEffect(() => {
-    if (!containerRef.current) return;
-    if (gameRef.current) return;
+    if (!containerRef.current || gameRef.current) return;
 
     const el = containerRef.current;
 
@@ -45,6 +49,7 @@ export default function HistogramPhaser({ buckets, target, median, viewerGuess, 
     };
 
     const game = new Phaser.Game(config);
+    gameRef.current = game;
 
     // Keep Phaser canvas matched to container size
     const resizeToContainer = (): void => {
@@ -55,7 +60,7 @@ export default function HistogramPhaser({ buckets, target, median, viewerGuess, 
     };
 
     if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(() => resizeToContainer());
+      const ro = new ResizeObserver(resizeToContainer);
       ro.observe(el);
       resizeObserverRef.current = ro;
     } else {
@@ -64,15 +69,18 @@ export default function HistogramPhaser({ buckets, target, median, viewerGuess, 
 
     // Ensure the scene is added and started after boot
     game.events.once(Phaser.Core.Events.READY, () => {
-      // Start with initial data
+      // Use pending data from the holding area if it exists, otherwise use current props
+      const initialData = pendingUpdateRef.current || { buckets, target, median, viewerGuess };
+
+      // We've used the data, so clear the queue. The update effect will handle subsequent changes.
+      pendingUpdateRef.current = null;
+
       if (!game.scene.getScene('HistogramScene')) {
-        game.scene.add('HistogramScene', HistogramScene, true, { buckets, target, median, viewerGuess });
+        game.scene.add('HistogramScene', HistogramScene, true, initialData);
       } else {
-        game.scene.start('HistogramScene', { buckets, target, median, viewerGuess });
+        game.scene.start('HistogramScene', initialData);
       }
     });
-
-    gameRef.current = game;
 
     return () => {
       if (resizeObserverRef.current) {
@@ -84,18 +92,30 @@ export default function HistogramPhaser({ buckets, target, median, viewerGuess, 
       game.destroy(true);
       gameRef.current = null;
     };
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
+  // Effect 2: Handles passing data updates to the Phaser scene
   useEffect(() => {
     const game = gameRef.current;
-    if (!game) return;
+    const data: HistogramSceneConfig = { buckets, target, median, viewerGuess };
+
+    // If the game isn't ready yet, place the data in the holding area.
+    if (!game) {
+      pendingUpdateRef.current = data;
+      return;
+    }
+
     const scene = game.scene.getScene('HistogramScene') as HistogramScene | undefined;
+
+    // If the scene is active, send the data. Otherwise, queue it.
     if (scene && scene.scene.isActive()) {
-      scene.updateData({ buckets, target, median, viewerGuess });
+      scene.updateData(data);
+      // The update was successful, so clear any stale data from the holding area.
+      pendingUpdateRef.current = null;
+    } else {
+      pendingUpdateRef.current = data;
     }
   }, [buckets, target, median, viewerGuess]);
 
   return <div ref={containerRef} className={className} style={{ width: '100%', height: 240, overflow: 'hidden' }} />;
 }
-
-
