@@ -22,6 +22,9 @@ export const redisKeys = {
   medianCache: (gameId: string) => buildKey('games', 'median', 'cache', gameId),
   // Results
   gameResults: (gameId: string) => buildKey('games', 'results', gameId),
+  // Consensus calibration
+  consensusStdDevLog: buildKey('consensus', 'stddev-log'), // zset: score = std dev, member = gameId:timestamp
+  consensusThresholds: buildKey('consensus', 'thresholds'), // hash: threshold config
 } as const;
 
 export type RedisKey = (typeof redisKeys)[keyof typeof redisKeys];

@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Bug Tracker Reference",
+  "description": "Automatically checks the bug_tracker.md file whenever errors, bugs, or issues are encountered to ensure proper reference and tracking before proceeding with fixes",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "docs/Bug_tracking.md",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "An error, bug, or issue has been detected in the codebase. Before proceeding with any fixes or troubleshooting, first check the docs/Bug_tracking.md file to see if this issue has been documented, tracked, or has known solutions. Reference any existing bug reports, workarounds, or resolution steps before implementing new fixes. If the issue is not documented, consider adding it to the bug tracker for future reference."
+  }
+}

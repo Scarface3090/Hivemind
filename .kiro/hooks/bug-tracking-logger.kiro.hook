@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "name": "Bug Tracking Logger",
+  "description": "Monitors code changes and automatically creates log entries in bug_tracking.md when issues are fixed or errors are resolved",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "hivemind-waffleUI/src/**/*.ts",
+      "hivemind-waffleUI/src/**/*.tsx",
+      "package.json",
+      "*.config.js",
+      "*.config.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the recent file changes to detect if any bugs, errors, or issues were fixed. If you identify bug fixes or error resolutions, create an appropriate log entry in docs/Bug_tracking.md with the following details:\n\n1. **Date and Time**: Current timestamp\n2. **Issue Description**: What problem was fixed\n3. **Files Modified**: List of changed files\n4. **Root Cause**: What caused the issue (if identifiable)\n5. **Solution Applied**: How the issue was resolved\n6. **Impact**: What functionality was affected\n7. **Prevention**: Any steps to prevent similar issues\n\nLook for patterns like:\n- Error handling additions\n- Bug fix commits\n- Try-catch blocks added\n- Validation improvements\n- Type fixes\n- API error handling\n- Build/configuration fixes\n- Performance improvements that fix issues\n\nOnly create entries for actual bug fixes or error resolutions, not routine feature development."
+  }
+}

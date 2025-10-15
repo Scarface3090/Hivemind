@@ -3,7 +3,7 @@ import * as redis from '@devvit/web/server';
 import { computeGameResults, getGameResults } from '../core/services/scoring.service.js';
 import * as lifecycle from '../core/services/game.lifecycle.js';
 import * as repository from '../core/services/game.repository.js';
-import { GamePhase } from '../../shared/enums.js';
+import { GamePhase, ClueClarityRating, ConsensusLabelType } from '../../shared/enums.js';
 
 vi.mock('@devvit/web/server', () => ({
   redis: {
@@ -121,13 +121,18 @@ describe('Scoring Service', () => {
           hostUsername: 'host',
           breakdown: { guessingScore: 50, persuasionScore: 0, totalScore: 50 },
           participantCount: 0,
-          clueClarityRating:  'EXCELLENT',
+          clueClarityRating: ClueClarityRating.Excellent,
         },
         players: [],
         targetValue: 50,
         finalMedian: 50,
         histogram: [],
         accolades: {},
+        consensus: {
+          label: ConsensusLabelType.InsufficientData,
+          standardDeviation: 0,
+          description: 'Not enough data to determine consensus'
+        },
       },
       finalizedAt: new Date().toISOString(),
     });

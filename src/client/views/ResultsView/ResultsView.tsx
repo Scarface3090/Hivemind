@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getGameResults } from '../../api/games.js';
@@ -7,6 +7,8 @@ import type { PlayerScoreSummary } from '../../../shared/types/ScoreSummary.js';
 import { colors, spacing } from '../../styles/tokens.js';
 import { SpectrumPill } from '../../components/SpectrumPill.js';
 import HistogramPhaser from '../../components/HistogramPhaser.js';
+import { ConsensusLabel } from '../../components/ConsensusLabel.js';
+import { ConsensusErrorBoundary } from '../../components/ConsensusErrorBoundary.js';
 
 
 const useResults = (gameId: string | undefined) =>
@@ -35,123 +37,7 @@ const AccoladeBadge = ({ label }: { label: string }) => (
   </span>
 );
 
-const Histogram = ({
-  buckets,
-  target,
-  median,
-}: {
-  buckets: { rangeStart: number; rangeEnd: number; count: number }[];
-  target: number;
-  median: number;
-}) => {
-  const max = useMemo(() => Math.max(1, ...buckets.map((b) => b.count)), [buckets]);
-  const domainStart = buckets[0]?.rangeStart ?? 0;
-  const domainEnd = buckets[buckets.length - 1]?.rangeEnd ?? 100;
-  const toPct = (v: number): number => {
-    if (domainEnd === domainStart) return 0;
-    return ((v - domainStart) / (domainEnd - domainStart)) * 100;
-  };
 
-  return (
-    <div role="img" aria-label="Guess distribution histogram" style={{ width: '100%' }}>
-      <div style={{ position: 'relative', width: '100%' }}>
-        {/* Marker lines overlayed on top of the grid */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${toPct(target)}%`,
-            top: 0,
-            bottom: 0,
-            width: 2,
-            background: colors.redditOrange,
-            transform: 'translateX(-1px)',
-            zIndex: 3,
-            pointerEvents: 'none',
-          }}
-        />
-        {/* Target marker dot */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${toPct(target)}%`,
-            top: 0,
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: colors.redditOrange,
-            transform: 'translate(-50%, -50%)',
-            boxShadow: '0 0 0 2px rgba(0,0,0,0.3)',
-            zIndex: 4,
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${toPct(median)}%`,
-            top: 0,
-            bottom: 0,
-            width: 2,
-            background: colors.redditBlue,
-            transform: 'translateX(-1px)',
-            zIndex: 3,
-            pointerEvents: 'none',
-          }}
-        />
-        {/* Median marker dot */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: `${toPct(median)}%`,
-            top: 0,
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: colors.redditBlue,
-            transform: 'translate(-50%, -50%)',
-            boxShadow: '0 0 0 2px rgba(0,0,0,0.3)',
-            zIndex: 4,
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Bar grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${buckets.length}, 1fr)`, gap: 2, alignItems: 'end' }}>
-          {buckets.map((b) => {
-            const heightPct = (b.count / max) * 100;
-            const isTarget = target >= b.rangeStart && target <= b.rangeEnd;
-            const isMedian = median >= b.rangeStart && median <= b.rangeEnd;
-            const barColor = isTarget
-              ? colors.redditOrange
-              : isMedian
-              ? colors.redditBlue
-              : 'rgba(255,255,255,0.2)';
-            return (
-              <div key={`${b.rangeStart}-${b.rangeEnd}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>{b.count}</span>
-                <div
-                  title={`${b.rangeStart}-${b.rangeEnd}: ${b.count}`}
-                  style={{
-                    width: '100%',
-                    height: `${Math.max(6, Math.round(heightPct))}%`,
-                    background: barColor,
-                    borderRadius: 4,
-                    transition: 'height 200ms',
-                  }}
-                />
-                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 4 }}>{b.rangeStart}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const findPlayer = (players: PlayerScoreSummary[], id?: string) => players.find((p) => p.userId === id);
 
@@ -216,7 +102,7 @@ const ResultsView = (): JSX.Element => {
                   buckets={data.scoreSummary.histogram}
                   target={data.scoreSummary.targetValue}
                   median={data.scoreSummary.finalMedian}
-                  viewerGuess={typeof data.viewer?.guessValue === 'number' ? data.viewer.guessValue : undefined}
+                  {...(typeof data.viewer?.guessValue === 'number' && { viewerGuess: data.viewer.guessValue })}
                 />
               </div>
               {/* Colored-dot legend */}
@@ -238,13 +124,51 @@ const ResultsView = (): JSX.Element => {
               </div>
             </section>
 
+            {/* Consensus section */}
+            <section aria-labelledby="consensus-title" style={{ marginBottom: spacing.lg }}>
+              <h3 id="consensus-title" style={{ color: colors.lightGray, marginBottom: spacing.sm }}>Community Consensus</h3>
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <ConsensusErrorBoundary>
+                  {data.scoreSummary.consensus ? (
+                    <div style={{ width: '100%', maxWidth: '480px' }}>
+                      <ConsensusLabel 
+                        consensus={data.scoreSummary.consensus}
+                        variant="default"
+                        showDescription={true}
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      className="card" 
+                      style={{ 
+                        padding: spacing.md, 
+                        borderRadius: 12, 
+                        background: 'rgba(255,255,255,0.06)',
+                        color: colors.lightGray,
+                        textAlign: 'center' as const,
+                        width: '100%',
+                        maxWidth: '400px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: spacing.sm
+                      }}
+                    >
+                      <span aria-hidden="true" style={{ fontSize: '16px' }}>❓</span>
+                      <span>Unable to calculate consensus</span>
+                    </div>
+                  )}
+                </ConsensusErrorBoundary>
+              </div>
+            </section>
+
             <section aria-labelledby="accolades-title" style={{ marginBottom: spacing.lg }}>
               <h3 id="accolades-title" style={{ color: colors.lightGray, marginBottom: spacing.sm }}>Accolades</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: spacing.sm }}>
                 {(() => {
                   const { bestAccuracy, topPersuasion, mostContrarian } = data.scoreSummary.accolades;
                   const players = data.scoreSummary.players;
-                  const acc: Array<{ key: string; title: string; user?: PlayerScoreSummary }> = [
+                  const acc = [
                     { key: 'Psychic', title: 'Psychic (Closest to Target)', user: findPlayer(players, bestAccuracy) },
                     { key: 'Top Comment', title: 'Top Comment (Most Persuasive)', user: findPlayer(players, topPersuasion) },
                     { key: 'Unpopular Opinion', title: 'Unpopular Opinion (Most Contrarian)', user: findPlayer(players, mostContrarian) },

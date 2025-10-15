@@ -819,6 +819,29 @@ button {
   }
 }
 
+/* Consensus section styling for results view */
+.consensus-section-label {
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Responsive adjustments for consensus label in results */
+@media (min-width: 640px) {
+  .consensus-section-label {
+    max-width: 480px;
+  }
+}
+
+@media (max-width: 639px) {
+  .consensus-section-label {
+    font-size: 0.9rem;
+  }
+  
+  .consensus-section-label .consensus-label {
+    padding: 12px 16px;
+  }
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
