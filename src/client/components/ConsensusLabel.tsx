@@ -74,6 +74,27 @@ export const ConsensusLabel: React.FC<ConsensusLabelProps> = ({
   onClick,
   tabIndex
 }) => {
+  // Helper function to map consensus label to dot count
+  const getDotCount = (label: ConsensusLabelType): number => {
+    switch (label) {
+      case ConsensusLabelType.PerfectHivemind:
+        return 5;
+      case ConsensusLabelType.EchoChamber:
+        return 4;
+      case ConsensusLabelType.BattleRoyale:
+        return 3;
+      case ConsensusLabelType.TotalAnarchy:
+        return 2;
+      case ConsensusLabelType.DumpsterFire:
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
+  // Generate unique ID for accessibility
+  const uniqueId = React.useId();
+  
   // Error handling for malformed consensus data
   if (!consensus || typeof consensus !== 'object') {
     console.warn('[ConsensusLabel] Invalid consensus data provided:', consensus);
@@ -185,14 +206,14 @@ export const ConsensusLabel: React.FC<ConsensusLabelProps> = ({
       `}
       role={isInteractive ? 'button' : 'status'}
       aria-label={config.ariaLabel}
-      aria-describedby={`consensus-description-${consensus.label}`}
+      aria-describedby={uniqueId}
       onClick={isInteractive ? onClick : undefined}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
       tabIndex={isInteractive ? (tabIndex ?? 0) : undefined}
     >
       {/* Hidden description for screen readers */}
       <span 
-        id={`consensus-description-${consensus.label}`}
+        id={uniqueId}
         style={{
           position: 'absolute',
           width: '1px',
@@ -222,27 +243,9 @@ export const ConsensusLabel: React.FC<ConsensusLabelProps> = ({
       <div className="flex items-center gap-1 flex-shrink-0">
         {/* Dot pattern to supplement color coding */}
         <div className="flex gap-0.5" aria-hidden="true">
-          {consensus.label === ConsensusLabelType.PerfectHivemind && (
-            <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
-          )}
-          {(consensus.label === ConsensusLabelType.EchoChamber || 
-            consensus.label === ConsensusLabelType.PerfectHivemind) && (
-            <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
-          )}
-          {(consensus.label === ConsensusLabelType.BattleRoyale || 
-            consensus.label === ConsensusLabelType.EchoChamber || 
-            consensus.label === ConsensusLabelType.PerfectHivemind) && (
-            <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
-          )}
-          {(consensus.label === ConsensusLabelType.TotalAnarchy || 
-            consensus.label === ConsensusLabelType.BattleRoyale || 
-            consensus.label === ConsensusLabelType.EchoChamber || 
-            consensus.label === ConsensusLabelType.PerfectHivemind) && (
-            <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
-          )}
-          {consensus.label === ConsensusLabelType.DumpsterFire && (
-            <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
-          )}
+          {Array.from({ length: getDotCount(consensus.label) }, (_, index) => (
+            <div key={index} className="w-1 h-1 rounded-full bg-current opacity-60"></div>
+          ))}
         </div>
       </div>
       

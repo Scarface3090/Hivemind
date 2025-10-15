@@ -39,7 +39,7 @@ export class ConsensusErrorBoundary extends Component<Props, State> {
           style={{ 
             padding: spacing.md, 
             borderRadius: 12, 
-            background: 'rgba(255,255,255,0.06)',
+            background: colors.backgroundOverlay,
             color: colors.lightGray,
             textAlign: 'center' as const,
             width: '100%',
@@ -50,7 +50,6 @@ export class ConsensusErrorBoundary extends Component<Props, State> {
             gap: spacing.sm
           }}
           role="alert"
-          aria-live="polite"
         >
           <span aria-hidden="true" style={{ fontSize: '16px' }}>⚠️</span>
           <span>Consensus calculation unavailable</span>

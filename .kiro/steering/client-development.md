@@ -8,7 +8,7 @@ fileMatchPattern: 'src/client/**/*'
 ## Environment Constraints
 - **Web-compatible dependencies only**: Use NPM dependencies that work in browser environments
 - **No WebSockets**: WebSockets are not supported. For realtime functionality, use Devvit's realtime service (search devvit docs for "realtime")
-- **Phaser for game engine**: Use Phaser 3 and JavaScript only. Do not introduce other game engines
+- **Phaser for game engine**: Use Phaser 3 with TypeScript, strict typing enabled. Do not introduce other game engines
 
 ## Architecture
 - This is the full-screen webview component of the Devvit app
@@ -17,7 +17,7 @@ fileMatchPattern: 'src/client/**/*'
 
 ## Technology Stack
 - **React 18**: Primary UI framework
-- **Phaser 3.88**: Game engine for interactive elements (sliders, animations)
+- **Phaser 3.90**: Game engine for interactive elements (sliders, animations)
 - **TypeScript**: Strict typing enabled
 - **Tailwind CSS**: Utility-first styling
 - **Vite**: Build tool and dev server
