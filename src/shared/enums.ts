@@ -48,3 +48,12 @@ export enum ClueClarityRating {
   NeedsWork = 'NEEDS_WORK',
 }
 
+export enum ConsensusLabelType {
+  PerfectHivemind = 'PERFECT_HIVEMIND',
+  EchoChamber = 'ECHO_CHAMBER',
+  BattleRoyale = 'BATTLE_ROYALE',
+  TotalAnarchy = 'TOTAL_ANARCHY',
+  DumpsterFire = 'DUMPSTER_FIRE',
+  InsufficientData = 'INSUFFICIENT_DATA',
+}
+

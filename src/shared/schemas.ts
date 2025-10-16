@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   AccoladeType,
   ClueClarityRating,
+  ConsensusLabelType,
   GamePhase,
   GuessSource,
   MedianFreshness,
@@ -101,6 +102,12 @@ export const scoreHistogramBucketSchema = z.object({
   count: z.number().int().nonnegative(),
 });
 
+export const consensusLabelSchema = z.object({
+  label: z.nativeEnum(ConsensusLabelType),
+  standardDeviation: z.number().min(0),
+  description: z.string().min(1),
+});
+
 export const scoreSummarySchema = z.object({
   host: hostScoreSummarySchema,
   players: z.array(playerScoreSummarySchema),
@@ -112,6 +119,7 @@ export const scoreSummarySchema = z.object({
     topPersuasion: z.string().optional(),
     mostContrarian: z.string().optional(),
   }),
+  consensus: consensusLabelSchema,
 });
 
 export const gameResultsViewerSchema = z.object({

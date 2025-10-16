@@ -1,4 +1,4 @@
-import type { AccoladeType, ClueClarityRating } from '../enums.js';
+import type { AccoladeType, ClueClarityRating, ConsensusLabelType } from '../enums.js';
 
 export interface ScoreBreakdown {
   guessingScore: number;
@@ -30,6 +30,7 @@ export interface ScoreSummary {
   finalMedian: number;
   histogram: ScoreHistogramBucket[];
   accolades: AccoladeSummary;
+  consensus: ConsensusLabel;
 }
 
 export interface ScoreHistogramBucket {
@@ -42,6 +43,12 @@ export interface AccoladeSummary {
   bestAccuracy?: PlayerScoreSummary['userId'];
   topPersuasion?: PlayerScoreSummary['userId'];
   mostContrarian?: PlayerScoreSummary['userId'];
+}
+
+export interface ConsensusLabel {
+  label: ConsensusLabelType;
+  standardDeviation: number;
+  description: string;
 }
 
 export interface GameResultsViewer {

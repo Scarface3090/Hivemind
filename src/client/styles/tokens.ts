@@ -3,6 +3,7 @@ export const colors = {
   redditBlue: 'var(--color-reddit-blue)',
   darkGray: 'var(--color-dark-gray)',
   lightGray: 'var(--color-light-gray)',
+  backgroundOverlay: 'rgba(255, 255, 255, 0.06)',
 };
 
 export const spacing = {
