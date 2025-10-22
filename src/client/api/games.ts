@@ -27,7 +27,7 @@ export interface ActiveGamesParams {
 
 export const getActiveGames = (params?: ActiveGamesParams): Promise<ActiveGamesResponse> =>
   apiClient.get<ActiveGamesResponse>(`${API_BASE}/active`, {
-    searchParams: params,
+    searchParams: params as Record<string, string | number | boolean | undefined>,
   });
 
 export const getGameById = (gameId: string): Promise<GamePollingResponse> =>
@@ -37,7 +37,15 @@ export const submitGuess = (
   gameId: string,
   payload: GuessRequest
 ): Promise<GuessResponse> => {
-  console.log(`[DEBUG] API client submitGuess called with gameId=${gameId}, payload=`, JSON.stringify(payload));
+  // Development-only logging with structured data (no sensitive fields exposed)
+  // Using location.hostname to detect development environment
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    console.log('[DEBUG] submitGuess called', {
+      gameId,
+      payloadKeys: Object.keys(payload),
+      payloadSize: JSON.stringify(payload).length
+    });
+  }
   return apiClient.post<GuessResponse, GuessRequest>(`${API_BASE}/${gameId}/guess`, payload);
 };
 

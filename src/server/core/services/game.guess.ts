@@ -65,13 +65,13 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
       userId,
       username,
       value: Number(existing.value ?? '0'),
-      justification: existing.justification || undefined,
       createdAt: existing.createdAt ?? timestampNow(),
       source: (existing.source as GuessSource) ?? GuessSource.Unknown,
-      redditCommentId: existing.redditCommentId || undefined,
+      ...(existing.justification && existing.justification.trim().length > 0 ? { justification: existing.justification } : {}),
+      ...(existing.redditCommentId ? { redditCommentId: existing.redditCommentId as `t1_${string}` | `t3_${string}` } : {}),
     };
 
-    const response = guessResponseSchema.parse({ guess: already, median: snapshot });
+    const response = guessResponseSchema.parse({ guess: already, median: snapshot }) as GuessResponse;
     return response;
   }
 
@@ -81,12 +81,17 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     userId,
     username,
     value: parsed.value,
-    justification: parsed.justification,
     createdAt: timestampNow(),
     source: GuessSource.InApp,
+    ...(parsed.justification && parsed.justification.trim().length > 0 ? { justification: parsed.justification } : {}),
   };
 
-  // Post comment to Reddit if game has a post
+  // First, persist the guess and compute median
+  await saveGuessRecord(guess);
+  // Refresh median cache after new guess
+  await computeAndCacheMedian(gameId);
+
+  // Now post comment to Reddit if game has a post (only after successful persistence)
   console.log(`[DEBUG] Game metadata redditPost:`, JSON.stringify(metadata.redditPost));
   if (metadata.redditPost?.postId) {
     try {
@@ -102,18 +107,18 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
       });
       
       console.log(`[DEBUG] Successfully posted comment with ID:`, comment.id);
-      guess.redditCommentId = comment.id;
+      
+      // Update the saved guess record with the Reddit comment ID
+      const commentId = comment.id as `t1_${string}` | `t3_${string}`;
+      guess.redditCommentId = commentId;
+      await saveGuessRecord(guess);
     } catch (error) {
       console.error(`Failed to post comment for guess ${guess.guessId}:`, error);
-      // Don't fail the guess if comment posting fails
+      // Don't fail the guess if comment posting fails - the guess is already persisted
     }
   } else {
     console.log(`[DEBUG] No Reddit post found for game ${gameId}, skipping comment posting`);
   }
-
-  await saveGuessRecord(guess);
-  // Refresh median cache after new guess
-  await computeAndCacheMedian(gameId);
   const median = await getMedianForGame(gameId);
 
   const snapshot: MedianSnapshot = {
@@ -124,7 +129,7 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     freshness: MedianFreshness.Fresh,
   };
 
-  return guessResponseSchema.parse({ guess, median: snapshot });
+  return guessResponseSchema.parse({ guess, median: snapshot }) as GuessResponse;
 };
 
 

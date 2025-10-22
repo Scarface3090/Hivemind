@@ -9,7 +9,7 @@ export interface Guess {
   justification?: string;
   createdAt: string;
   source: GuessSource;
-  redditCommentId?: string;
+  redditCommentId?: `t1_${string}` | `t3_${string}`;
 }
 
 export interface MedianSnapshot {

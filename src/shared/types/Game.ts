@@ -24,7 +24,7 @@ export interface GameMetadata {
   medianGuess: number | null;
   publishedAt?: string;
   redditPost?: {
-    postId: string;
+    postId: `t3_${string}`;
     permalink: string;
     url: string;
   };

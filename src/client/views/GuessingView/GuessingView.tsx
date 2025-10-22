@@ -14,11 +14,10 @@ const GuessingView = (): JSX.Element => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const currentValueRef = useRef<number>(50);
-  const latestMedianRef = useRef<number | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
   const [showJustification, setShowJustification] = useState<boolean>(true);
 
-  const { data, isLoading, error, refetch } = useQuery<GamePollingResponse>({
+  const { data, isLoading, error } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
     queryFn: () => getGameById(gameId!),
     enabled: !!gameId,
@@ -38,7 +37,6 @@ const GuessingView = (): JSX.Element => {
 
   const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
     mutationFn: (payload) => {
-      console.log(`[DEBUG] Client mutation calling submitGuess with payload:`, JSON.stringify(payload));
       return submitGuess(gameId!, payload);
     },
     onMutate: () => {
@@ -76,8 +74,7 @@ const GuessingView = (): JSX.Element => {
     // Only include justification if toggle is on AND there's actual text
     const justification = showJustification && raw && raw.trim().length > 0 ? raw.trim() : undefined;
     
-    console.log(`[DEBUG] Submitting guess: value=${currentValue}, showJustification=${showJustification}, justification="${justification}"`);
-    mutation.mutate({ value: currentValue, justification });
+    mutation.mutate({ value: currentValue, ...(justification && { justification }) });
   };
 
   useEffect(() => {
@@ -138,7 +135,7 @@ const GuessingView = (): JSX.Element => {
             spectrum={game.spectrum}
             value={currentValue}
             onValueChange={updateCurrentValue}
-            median={data?.median?.median}
+            median={data?.median?.median ?? null}
           />
         )}
 
@@ -157,13 +154,15 @@ const GuessingView = (): JSX.Element => {
           </div>
 
           <div className="justification-group" style={{ marginBottom: 16, display: showJustification ? 'block' : 'none' }}>
-            <label htmlFor="justification" className="label">Justification</label>
+            <label htmlFor="justification" className="label">Influence the Hivemind</label>
             <textarea 
               id="justification" 
               name="justification" 
               rows={3} 
               className="input" 
               placeholder="Share your reasoning to influence the hivemind..." 
+              maxLength={500}
+              disabled={mutation.isPending}
             />
           </div>
 
@@ -171,8 +170,8 @@ const GuessingView = (): JSX.Element => {
 
           <div className="actions" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button type="button" className="secondary-button" onClick={() => navigate('/feed')}>Cancel</button>
-            <button type="submit" disabled={isLoading || mutation.isLoading} className="primary-button">
-              {mutation.isLoading ? 'Submitting…' : 'Submit guess'}
+            <button type="submit" disabled={isLoading || mutation.isPending} className="primary-button">
+              {mutation.isPending ? 'Submitting…' : 'Submit guess'}
             </button>
           </div>
 
