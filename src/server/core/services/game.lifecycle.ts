@@ -19,6 +19,7 @@ import {
   dequeueActiveGames,
   updateGameState,
   deleteGameMetadata,
+  getGuessCountForGame,
 } from './game.repository.js';
 import type { Spectrum } from '../../../shared/types/Spectrum.js';
 
@@ -177,6 +178,9 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     }
   }
 
+  // Calculate totalParticipants dynamically from actual guess count
+  const dynamicTotalParticipants = await getGuessCountForGame(gameId);
+
   return {
     gameId,
     hostUserId,
@@ -189,7 +193,7 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
       ...parsedTiming,
       revealAt: parsedTiming.revealAt ?? parsedTiming.endTime,
     },
-    totalParticipants: Number(totalParticipants ?? '0'),
+    totalParticipants: dynamicTotalParticipants,
     medianGuess: medianGuessValue,
     ...(publishedAt && publishedAt !== '' ? { publishedAt } : {}),
     ...(parsedRedditPost ? { redditPost: parsedRedditPost } : {}),

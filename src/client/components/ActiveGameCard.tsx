@@ -23,7 +23,7 @@ export function ActiveGameCard({ game }: { game: GameMetadata }): JSX.Element {
           className="chip chip--participants"
           role="status"
           aria-live="polite"
-          title="Number of participants"
+          title={`${game.totalParticipants} unique ${game.totalParticipants === 1 ? 'player has' : 'players have'} submitted guesses`}
         >
           👥 {game.totalParticipants}
         </span>

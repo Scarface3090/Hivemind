@@ -106,7 +106,7 @@ const GuessingView = (): JSX.Element => {
               className="chip chip--participants"
               role="status"
               aria-live="polite"
-              title="Number of participants"
+              title={`${game?.totalParticipants ?? 0} unique ${(game?.totalParticipants ?? 0) === 1 ? 'player has' : 'players have'} submitted guesses`}
             >
               👥 {game?.totalParticipants ?? '—'}
             </span>
