@@ -91,10 +91,13 @@ router.get('/api/games/active', async (req, res) => {
 router.post('/api/games/:gameId/guess', validate(guessRequestSchema), async (req, res) => {
   try {
     const { gameId } = req.params as { gameId: string };
+    console.log(`[DEBUG] API route received guess submission for gameId=${gameId}, body=`, JSON.stringify(req.body));
     const payload = await submitGuess(gameId, req.body);
     const response = guessResponseSchema.parse(payload);
+    console.log(`[DEBUG] API route returning response:`, JSON.stringify(response));
     res.status(201).json(response);
   } catch (error) {
+    console.error(`[DEBUG] API route error:`, error);
     res
       .status(400)
       .json({ status: 'error', message: error instanceof Error ? error.message : 'Failed to submit guess' });

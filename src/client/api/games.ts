@@ -36,7 +36,10 @@ export const getGameById = (gameId: string): Promise<GamePollingResponse> =>
 export const submitGuess = (
   gameId: string,
   payload: GuessRequest
-): Promise<GuessResponse> => apiClient.post<GuessResponse, GuessRequest>(`${API_BASE}/${gameId}/guess`, payload);
+): Promise<GuessResponse> => {
+  console.log(`[DEBUG] API client submitGuess called with gameId=${gameId}, payload=`, JSON.stringify(payload));
+  return apiClient.post<GuessResponse, GuessRequest>(`${API_BASE}/${gameId}/guess`, payload);
+};
 
 export const getGameResults = (gameId: string): Promise<GameResults> =>
   apiClient.get<GameResults>(`${API_BASE}/${gameId}/results`);

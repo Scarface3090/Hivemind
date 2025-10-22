@@ -16,7 +16,7 @@ const GuessingView = (): JSX.Element => {
   const currentValueRef = useRef<number>(50);
   const latestMedianRef = useRef<number | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
-  const [showJustification, setShowJustification] = useState<boolean>(false);
+  const [showJustification, setShowJustification] = useState<boolean>(true);
 
   const { data, isLoading, error, refetch } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
@@ -37,7 +37,10 @@ const GuessingView = (): JSX.Element => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
-    mutationFn: (payload) => submitGuess(gameId!, payload),
+    mutationFn: (payload) => {
+      console.log(`[DEBUG] Client mutation calling submitGuess with payload:`, JSON.stringify(payload));
+      return submitGuess(gameId!, payload);
+    },
     onMutate: () => {
       setSubmissionFeedback(null);
     },
@@ -69,8 +72,11 @@ const GuessingView = (): JSX.Element => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
-    const raw = showJustification ? new FormData(form).get('justification')?.toString() : undefined;
-    const justification = raw && raw.trim().length > 0 ? raw.trim() : undefined;
+    const raw = new FormData(form).get('justification')?.toString();
+    // Only include justification if toggle is on AND there's actual text
+    const justification = showJustification && raw && raw.trim().length > 0 ? raw.trim() : undefined;
+    
+    console.log(`[DEBUG] Submitting guess: value=${currentValue}, showJustification=${showJustification}, justification="${justification}"`);
     mutation.mutate({ value: currentValue, justification });
   };
 
@@ -146,22 +152,20 @@ const GuessingView = (): JSX.Element => {
                 style={{ width: 20, height: 20 }}
                 aria-label="Enable justification input"
               />
-              <span style={{ color: '#fff', fontSize: '14px' }}>Add justification</span>
+              <span style={{ color: '#fff', fontSize: '14px' }}>Influence the Hivemind</span>
             </label>
           </div>
 
-          {showJustification && (
-            <div className="justification-group" style={{ marginBottom: 16 }}>
-              <label htmlFor="justification" className="label">Justification</label>
-              <textarea 
-                id="justification" 
-                name="justification" 
-                rows={3} 
-                className="input" 
-                placeholder="Why did you choose this value?" 
-              />
-            </div>
-          )}
+          <div className="justification-group" style={{ marginBottom: 16, display: showJustification ? 'block' : 'none' }}>
+            <label htmlFor="justification" className="label">Justification</label>
+            <textarea 
+              id="justification" 
+              name="justification" 
+              rows={3} 
+              className="input" 
+              placeholder="Share your reasoning to influence the hivemind..." 
+            />
+          </div>
 
           <div className="current-value" aria-live="polite">Your guess: {currentValue}</div>
 

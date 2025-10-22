@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { context } from '@devvit/web/server';
+import { context, reddit } from '@devvit/web/server';
 import { GuessSource, GamePhase, MedianFreshness } from '../../../shared/enums.js';
 import type { Guess, MedianSnapshot } from '../../../shared/types/Guess.js';
 import { timestampNow } from '../../../shared/utils/index.js';
@@ -85,6 +85,31 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     createdAt: timestampNow(),
     source: GuessSource.InApp,
   };
+
+  // Post comment to Reddit if game has a post
+  console.log(`[DEBUG] Game metadata redditPost:`, JSON.stringify(metadata.redditPost));
+  if (metadata.redditPost?.postId) {
+    try {
+      const commentText = parsed.justification 
+        ? `My guess: ${parsed.value}\n\n${parsed.justification}`
+        : `My guess: ${parsed.value}`;
+      
+      console.log(`[DEBUG] Posting comment to Reddit post ${metadata.redditPost.postId} with text:`, commentText);
+      const comment = await reddit.submitComment({
+        id: metadata.redditPost.postId,
+        text: commentText,
+        runAs: 'USER'
+      });
+      
+      console.log(`[DEBUG] Successfully posted comment with ID:`, comment.id);
+      guess.redditCommentId = comment.id;
+    } catch (error) {
+      console.error(`Failed to post comment for guess ${guess.guessId}:`, error);
+      // Don't fail the guess if comment posting fails
+    }
+  } else {
+    console.log(`[DEBUG] No Reddit post found for game ${gameId}, skipping comment posting`);
+  }
 
   await saveGuessRecord(guess);
   // Refresh median cache after new guess

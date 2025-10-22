@@ -14,7 +14,16 @@
     "entry": "index.cjs"
   },
   "reddit": {
-    "api": true
+    "api": true,
+    "asUser": [
+      "SUBMIT_COMMENT"
+    ]
+  },
+  "permissions": {
+    "reddit": {
+      "enable": true,
+      "asUser": ["SUBMIT_COMMENT"]
+    }
   },
   "scheduler": {
     "tasks": {
