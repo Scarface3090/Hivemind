@@ -3325,3 +3325,88 @@ it('test with mock', () => {
 - Test that error messages match expectations
 
 These lessons learned from the consensus labeling feature implementation provide a foundation for avoiding similar issues in future development and maintaining high code quality standards.
+
+---
+
+## WEBVIEW-001: useWebView fullscreen request failed; web view asset could not be found
+
+**Date**: 2025-10-22  
+**Severity**: High  
+**Status**: Resolved  
+
+### Problem Description
+
+The Devvit app was throwing errors when trying to open webviews:
+```
+[DEVVIT] Error in event handler Error: useWebView fullscreen request failed; web view asset could not be found
+```
+
+This error occurred when users interacted with custom posts created by the app, preventing the webview from loading properly.
+
+### Root Cause Analysis
+
+The issue was caused by incorrect Devvit configuration for webview handling:
+
+1. **Missing inline webview configuration**: The `devvit.json` file was missing the `"inline": true` property in the post entrypoint configuration
+2. **Legacy webview pattern**: The app was trying to use the old `useWebView` pattern instead of the modern inline webview approach
+3. **Missing background image**: The splash screen configuration lacked a background image for loading states
+
+### Solution Implemented
+
+**Configuration Changes:**
+
+1. **Updated `devvit.json`**:
+   ```json
+   "post": {
+     "dir": "dist/client",
+     "entrypoints": {
+       "default": {
+         "entry": "index.html",
+         "inline": true
+       }
+     }
+   }
+   ```
+
+2. **Updated post creation in `src/server/core/post.ts`**:
+   ```typescript
+   splash: {
+     appDisplayName: 'Hivemind',
+     description: metadata.clue,
+     buttonLabel: 'Play round',
+     backgroundUri: 'bg.png', // used as loading screen for inline web views
+   }
+   ```
+
+### Technical Details
+
+- **Devvit Version**: 0.12.0
+- **Pattern**: Migrated from legacy `useWebView` to modern inline webviews
+- **Background Image**: Uses existing `bg.png` asset from `/dist/client/assets/`
+- **Build Process**: No changes required to build pipeline
+
+### Testing
+
+- [x] Build completed successfully (`npm run build`)
+- [x] Configuration validated against Devvit documentation
+- [x] Background image asset confirmed present in build output
+
+### Resolution Status
+
+**RESOLVED** - Configuration updated to use modern Devvit inline webview pattern.
+
+### Key Learning
+
+**Modern Devvit Pattern**: Always use inline webviews (`"inline": true`) instead of the legacy `useWebView` pattern for better performance and user experience.
+
+**Best Practices:**
+- Always include `backgroundUri` in splash screen configuration for inline webviews
+- Use existing assets from the build output for background images
+- Follow current Devvit documentation patterns for webview configuration
+- Test webview functionality after configuration changes
+
+### References
+
+- Devvit Documentation: [Inline Web Views](https://developers.reddit.com/docs/versioned_docs/version-0.12/capabilities/interactive-posts/first_screen_customization)
+- Migration Guide: [Inline Web View Migration](https://developers.reddit.com/docs/versioned_docs/version-0.12/guides/migrate/inline-web-view)
+

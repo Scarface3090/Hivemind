@@ -62,6 +62,7 @@ export const createGamePost = async ({ metadata }: CreateGamePostPayload): Promi
       appDisplayName: 'Hivemind',
       description: metadata.clue,
       buttonLabel: 'Play round',
+      backgroundUri: 'bg.png', // used as loading screen for inline web views
     },
   });
 
@@ -81,6 +82,7 @@ export const createPost = async () => {
   return await reddit.submitCustomPost({
     splash: {
       appDisplayName: 'hvmtestapp',
+      backgroundUri: 'bg.png', // used as loading screen for inline web views
     },
     subredditName,
     title: 'hvmtestapp',
