@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "name": "README Feature Updater",
+  "description": "Automatically updates the project README file whenever new functions, functionality, or features are implemented in the codebase",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "hivemind-waffleUI/src/**/*.ts",
+      "hivemind-waffleUI/src/**/*.tsx",
+      "hivemind-waffleUI/src/**/*.js",
+      "hivemind-waffleUI/src/**/*.jsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "New functionality has been implemented in the codebase. Please analyze the recent changes and update the README.md file in the project root to reflect any new features, functions, or capabilities that have been added. Focus on user-facing features and significant functionality changes that should be documented for users and developers."
+  }
+}

@@ -16,6 +16,8 @@ import { guessRequestSchema, guessResponseSchema, gamePollingResponseSchema, gam
 import { getGameById } from '../services/game.lifecycle.js';
 import { getMedianSnapshotCached } from '../services/median.service.js';
 import { getGameResults } from '../services/scoring.service.js';
+import { getAvailableContexts, getContextsWithCounts, getFilteredSpectrum } from '../services/content.service.js';
+import { contextsResponseSchema } from '../../../shared/schemas.js';
 
 const router = express.Router();
 
@@ -34,7 +36,21 @@ const getEffectiveUser = (): { userId?: string; username?: string } => {
   return ctx;
 };
 
-router.post('/api/games/draft', validate(draftRequestSchema), async (_req, res) => {
+// GET /api/contexts - Returns available contexts with counts
+router.get('/api/contexts', async (_req, res) => {
+  try {
+    console.log('[API] GET /api/contexts - Loading contexts with counts');
+    const contexts = await getContextsWithCounts();
+    console.log(`[API] GET /api/contexts - Found ${contexts.length} contexts:`, contexts.map(c => `${c.context} (${c.totalCount})`).join(', '));
+    const response = contextsResponseSchema.parse({ contexts });
+    res.json(response);
+  } catch (error) {
+    console.error('[API] GET /api/contexts - Error:', error);
+    res.status(500).json({ status: 'error', message: error instanceof Error ? error.message : 'Failed to load contexts' });
+  }
+});
+
+router.post('/api/games/draft', validate(draftRequestSchema), async (req, res) => {
   const { userId } = getEffectiveUser();
   if (!userId) {
     res.status(401).json({ status: 'error', message: 'User context missing' });
@@ -42,7 +58,8 @@ router.post('/api/games/draft', validate(draftRequestSchema), async (_req, res) 
   }
 
   try {
-    const draft = await createDraft(userId);
+    const { context, difficulty } = req.body || {};
+    const draft = await createDraft(userId, { context, difficulty });
     const response = draftResponseSchema.parse(draft);
     res.status(201).json(response);
   } catch (error) {

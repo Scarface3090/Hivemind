@@ -76,6 +76,23 @@ export interface DecrementResponse {
   count: number;
 }
 
+// Context selection
+export interface ContextSummary {
+  context: string;
+  totalCount: number;
+  difficultyBreakdown: Record<string, number>;
+}
+
+export interface ContextsResponse {
+  contexts: ContextSummary[];
+}
+
+// Enhanced draft request with filtering
+export interface EnhancedDraftRequest {
+  context?: string;
+  difficulty?: string;
+}
+
 // Dev tools: simulate guesses
 export interface SimulateGuessesRequest {
   count?: number;

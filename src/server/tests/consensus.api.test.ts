@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { redis } from '@devvit/web/server';
 import * as scoringService from '../core/services/scoring.service.js';
 import * as repository from '../core/services/game.repository.js';
-import { GamePhase, GuessSource, ConsensusLabelType } from '../../shared/enums.js';
+import { GamePhase, GuessSource, ConsensusLabelType, SpectrumDifficulty } from '../../shared/enums.js';
 import type { GameResults } from '../../shared/types/Game.js';
 
 // Mock dependencies
@@ -50,6 +50,8 @@ describe('Consensus API Integration Tests', () => {
       id: 'temperature',
       leftLabel: 'Freezing',
       rightLabel: 'Boiling',
+      difficulty: SpectrumDifficulty.Easy,
+      context: 'Test',
     },
     secretTarget: 75,
     timing: {

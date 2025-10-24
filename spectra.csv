@@ -1,0 +1,151 @@
+ID,Context,Left_Label,Right_Label,Difficulty
+1,Movies,Flop,Blockbuster,EASY
+2,Movies,Overrated,Underrated,MEDIUM
+3,Movies,Critics Hate,Critics Love,EASY
+4,Movies,Guilty Pleasure,High Art,MEDIUM
+5,Movies,Boring,Mind-Blowing,EASY
+6,Movies,Too Short,Too Long,MEDIUM
+7,Movies,Shallow,Deep,MEDIUM
+8,Movies,Old School,Modern,EASY
+9,Movies,Niche Appeal,Mass Appeal,MEDIUM
+10,Movies,All Style,All Substance,MEDIUM
+11,Food,Cursed Combination,Delicious Masterpiece,EASY
+12,Food,Basic,Gourmet,EASY
+13,Food,Overpriced,Steal,EASY
+14,Food,Healthy,Indulgent,EASY
+15,Food,Childhood Nostalgia,Adult Taste,MEDIUM
+16,Food,Simple,Complex,EASY
+17,Food,Trendy Fad,Timeless Classic,MEDIUM
+18,Food,Gross,Divine,EASY
+19,Food,Pretentious,Comfort Food,EASY
+20,Food,Weird,Normal,EASY
+21,Gaming,Easy Mode,Soulslike Difficulty,EASY
+22,Gaming,Casual,Hardcore,EASY
+23,Gaming,Overrated,Hidden Gem,MEDIUM
+24,Gaming,Pay-to-Win,Skill-Based,EASY
+25,Gaming,Dead Game,Living Legend,MEDIUM
+26,Gaming,Broken Mess,Polished Gem,EASY
+27,Gaming,Walking Simulator,Action Packed,EASY
+28,Gaming,Nostalgia Bait,Objectively Great,MEDIUM
+29,Gaming,Indie Charm,AAA Polish,EASY
+30,Gaming,Niche,Mainstream,EASY
+31,Technology,Overpriced,Worth Every Penny,EASY
+32,Technology,Gimmick,Game Changer,MEDIUM
+33,Technology,User-Friendly,Power User,EASY
+34,Technology,Privacy Nightmare,Convenient,MEDIUM
+35,Technology,Outdated,Cutting Edge,EASY
+36,Technology,Overhyped,Underrated,MEDIUM
+37,Technology,Simple,Complex,EASY
+38,Technology,Niche Tool,Everyone Needs,EASY
+39,Technology,Reliable,Experimental,EASY
+40,Technology,Anti-Consumer,Pro-Consumer,MEDIUM
+41,Social Media,Cringe,Iconic,EASY
+42,Social Media,Dead Platform,Thriving,EASY
+43,Social Media,For Kids,For Adults,EASY
+44,Social Media,Toxic,Wholesome,EASY
+45,Social Media,Time Waster,Actually Useful,EASY
+46,Social Media,Attention Seeking,Genuine,MEDIUM
+47,Social Media,Trend Follower,Trendsetter,MEDIUM
+48,Social Media,Surface Level,Deep Connection,MEDIUM
+49,Social Media,Algorithm Hell,User Control,MEDIUM
+50,Social Media,Private,Public,EASY
+51,Life Skills,Useless Talent,Essential Skill,EASY
+52,Life Skills,Overrated,Undervalued,MEDIUM
+53,Life Skills,Easy to Learn,Takes Forever,EASY
+54,Life Skills,Practical,Impressive,MEDIUM
+55,Life Skills,Basic Adult,Advanced Pro,EASY
+56,Life Skills,Natural Gift,Learned Ability,MEDIUM
+57,Life Skills,Old School,Modern Method,EASY
+58,Life Skills,Solo Activity,Team Effort,EASY
+59,Life Skills,Cheap to Start,Expensive Hobby,EASY
+60,Life Skills,Daily Use,Special Occasion,EASY
+61,Relationships,Red Flag,Green Flag,EASY
+62,Relationships,Adorable Quirk,Deal Breaker,EASY
+63,Relationships,Romantic,Practical,MEDIUM
+64,Relationships,Too Clingy,Too Independent,EASY
+65,Relationships,Cute,Annoying,EASY
+66,Relationships,First Date,Marriage Material,MEDIUM
+67,Relationships,Just Friends,Serious Romance,MEDIUM
+68,Relationships,High Maintenance,Low Maintenance,EASY
+69,Relationships,Relationship Goals,Unrealistic,MEDIUM
+70,Relationships,Sweet,Cringe,EASY
+71,Lifestyle,Productive,Lazy,EASY
+72,Lifestyle,Minimalist,Maximalist,EASY
+73,Lifestyle,Trendy,Classic,EASY
+74,Lifestyle,Expensive Habit,Budget Friendly,EASY
+75,Lifestyle,High Effort,Low Effort,EASY
+76,Lifestyle,Morning Person,Night Owl,EASY
+77,Lifestyle,Organized,Chaotic,EASY
+78,Lifestyle,Introvert,Extrovert,EASY
+79,Lifestyle,Healthy,Indulgent,EASY
+80,Lifestyle,Practical,Aesthetic,EASY
+81,Entertainment,Skip It,Binge Worthy,EASY
+82,Entertainment,Overrated,Underrated,MEDIUM
+83,Entertainment,Guilty Pleasure,High Quality,EASY
+84,Entertainment,Mainstream,Niche,EASY
+85,Entertainment,Classic,Modern,EASY
+86,Entertainment,Mindless Fun,Thought Provoking,EASY
+87,Entertainment,Solo Activity,Social Experience,EASY
+88,Entertainment,Background Noise,Full Attention,EASY
+89,Entertainment,Nostalgic,Fresh,EASY
+90,Entertainment,For Everyone,Target Audience,MEDIUM
+91,Internet Culture,Cringe,Based,EASY
+92,Internet Culture,Normie,Chronically Online,EASY
+93,Internet Culture,Dead Meme,Timeless,EASY
+94,Internet Culture,Overused,Underrated,MEDIUM
+95,Internet Culture,Wholesome,Toxic,EASY
+96,Internet Culture,Try Hard,Effortless,EASY
+97,Internet Culture,Mainstream,Underground,EASY
+98,Internet Culture,Attention Seeking,Genuinely Funny,MEDIUM
+99,Internet Culture,Forced,Organic,EASY
+100,Internet Culture,Boomer Humor,Gen Z Humor,EASY
+101,Movies,Pretentious,Accessible,HARD
+102,Movies,Forgettable,Culturally Defining,HARD
+103,Movies,Technically Flawed,Technical Masterpiece,HARD
+104,Movies,Derivative,Groundbreaking,HARD
+105,Movies,Emotionally Manipulative,Genuine Emotion,HARD
+106,Food,Appropriation,Authentic,HARD
+107,Food,Acquired Taste,Universally Loved,HARD
+108,Food,Processed Garbage,Whole Food,HARD
+109,Food,Regional Delicacy,Global Staple,HARD
+110,Food,Molecular Gastronomy,Traditional Cooking,HARD
+111,Gaming,Mechanical Perfection,Narrative Excellence,HARD
+112,Gaming,Toxic Community,Wholesome Fanbase,HARD
+113,Gaming,Asset Flip,Original IP,HARD
+114,Gaming,Streamer Bait,Actually Fun,HARD
+115,Gaming,Artistic Vision,Market Pandering,HARD
+116,Technology,Vaporware,Delivered Product,HARD
+117,Technology,Planned Obsolescence,Built to Last,HARD
+118,Technology,Open Source,Walled Garden,HARD
+119,Technology,Disruptive Innovation,Incremental Update,HARD
+120,Technology,Techbro Solution,Actual Problem Solving,HARD
+121,Social Media,Echo Chamber,Diverse Perspectives,HARD
+122,Social Media,Astroturfed,Grassroots,HARD
+123,Social Media,Rage Bait,Thoughtful Discourse,HARD
+124,Social Media,Performative Activism,Real Impact,HARD
+125,Social Media,Parasocial Nightmare,Healthy Boundaries,HARD
+126,Life Skills,Privilege,Necessity,HARD
+127,Life Skills,Soft Skill,Hard Skill,HARD
+128,Life Skills,Book Smart,Street Smart,HARD
+129,Life Skills,Performative,Substantive,HARD
+130,Life Skills,Theory,Practice,HARD
+131,Relationships,Love Language Mismatch,Perfect Compatibility,HARD
+132,Relationships,Codependent,Interdependent,HARD
+133,Relationships,Trauma Bonding,Genuine Connection,HARD
+134,Relationships,Settling,Choosing,HARD
+135,Relationships,Passion,Stability,HARD
+136,Lifestyle,Consumption,Creation,HARD
+137,Lifestyle,Performative Wellness,Actual Health,HARD
+138,Lifestyle,Survivorship Bias,Legitimate Advice,HARD
+139,Lifestyle,FOMO,JOMO,HARD
+140,Lifestyle,Grindset,Work-Life Balance,HARD
+141,Entertainment,Fanservice,Artist's Vision,HARD
+142,Entertainment,Derivative,Homage,HARD
+143,Entertainment,Problematic,Progressive,HARD
+144,Entertainment,Lowest Common Denominator,Niche Excellence,HARD
+145,Entertainment,Formulaic,Experimental,HARD
+146,Internet Culture,Irony Poisoned,Sincere,HARD
+147,Internet Culture,Chronically Online Take,Grass-Touching Opinion,HARD
+148,Internet Culture,Context Collapse,Niche Reference,HARD
+149,Internet Culture,Cancel Worthy,Forgivable,HARD
+150,Internet Culture,Terminally Online,Normcore,HARD

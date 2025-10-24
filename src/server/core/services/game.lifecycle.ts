@@ -4,7 +4,8 @@ import type { PublishGameRequest, RevealJobPayload } from '../../../shared/api.j
 import type { GameMetadata, GameTiming } from '../../../shared/types/Game.js';
 import { MIN_GUESS_VALUE, MAX_GUESS_VALUE } from '../../../shared/constants.js';
 import { timestampNow } from '../../../shared/utils/index.js';
-import { ensureSpectrumCache } from './content.service.js';
+import { ensureSpectrumCache, getFilteredSpectrum } from './content.service.js';
+import { SpectrumDifficulty } from '../../../shared/enums.js';
 import { createGamePost } from '../post.js';
 import {
   saveDraft,
@@ -38,7 +39,14 @@ export interface EnrichedDraftRecord extends Omit<DraftRecord, 'spectrumId'> {
   spectrum: Spectrum;
 }
 
-const pickRandomSpectrumId = async (): Promise<string> => {
+const pickRandomSpectrumId = async (context?: string, difficulty?: SpectrumDifficulty): Promise<string> => {
+  if (context || difficulty) {
+    // Use filtered selection
+    const spectrum = await getFilteredSpectrum(context, difficulty);
+    return spectrum.id;
+  }
+  
+  // Fallback to random selection from all spectra
   const spectra = await ensureSpectrumCache();
   if (!spectra.length) {
     throw new Error('No spectra available to create a draft.');
@@ -55,11 +63,11 @@ const pickRandomSpectrumId = async (): Promise<string> => {
 const randomTargetValue = (): number =>
   Math.floor(Math.random() * (MAX_GUESS_VALUE - MIN_GUESS_VALUE + 1)) + MIN_GUESS_VALUE;
 
-const buildDraft = async (hostUserId: string): Promise<DraftRecord> => {
+const buildDraft = async (hostUserId: string, options?: { context?: string; difficulty?: SpectrumDifficulty }): Promise<DraftRecord> => {
   const draftId = randomUUID();
   const now = Date.now();
   const createdAt = new Date(now).toISOString();
-  const spectrumId = await pickRandomSpectrumId();
+  const spectrumId = await pickRandomSpectrumId(options?.context, options?.difficulty);
 
   const expiresAt = new Date(now + DRAFT_TTL_SECONDS * 1000).toISOString();
 
@@ -73,8 +81,8 @@ const buildDraft = async (hostUserId: string): Promise<DraftRecord> => {
   };
 };
 
-export const createDraft = async (hostUserId: string): Promise<EnrichedDraftRecord> => {
-  const draft = await buildDraft(hostUserId);
+export const createDraft = async (hostUserId: string, options?: { context?: string; difficulty?: SpectrumDifficulty }): Promise<EnrichedDraftRecord> => {
+  const draft = await buildDraft(hostUserId, options);
   await saveDraft(draft, DRAFT_TTL_SECONDS);
 
   const spectra = await ensureSpectrumCache();

@@ -9,7 +9,7 @@ import {
 } from '../core/services/scoring.service.js';
 import * as lifecycle from '../core/services/game.lifecycle.js';
 import * as repository from '../core/services/game.repository.js';
-import { GamePhase, GuessSource, ConsensusLabelType, ClueClarityRating } from '../../shared/enums.js';
+import { GamePhase, GuessSource, ConsensusLabelType, ClueClarityRating, SpectrumDifficulty } from '../../shared/enums.js';
 import type { GameMetadata } from '../../shared/types/Game.js';
 import type { Guess } from '../../shared/types/Guess.js';
 import { redisKeys } from '../core/redis/keys.js';
@@ -57,6 +57,8 @@ describe('Consensus Feature Integration Tests', () => {
       id: 'temperature',
       leftLabel: 'Freezing',
       rightLabel: 'Boiling',
+      difficulty: SpectrumDifficulty.Easy,
+      context: 'Test',
     },
     secretTarget: 75,
     timing: {
@@ -286,7 +288,7 @@ describe('Consensus Feature Integration Tests', () => {
         hostUsername: 'TestHost',
         clue: 'Test clue',
         state: GamePhase.Reveal,
-        spectrum: { id: 'test', leftLabel: 'Left', rightLabel: 'Right' },
+        spectrum: { id: 'test', leftLabel: 'Left', rightLabel: 'Right', difficulty: SpectrumDifficulty.Easy, context: 'Test' },
         secretTarget: 50,
         timing: {
           startTime: new Date().toISOString(),

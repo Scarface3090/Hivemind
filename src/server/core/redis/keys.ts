@@ -8,6 +8,11 @@ const gameStateKey = (state: GamePhase): string => buildKey('games', 'by-state',
 
 export const redisKeys = {
   spectrumCache: buildKey('content', 'spectra'),
+  // Context-based caching for dynamic content system
+  contextIndex: buildKey('content', 'contexts'), // set: available context names
+  contextSpectra: (context: string) => buildKey('content', 'context', context), // set: spectrum IDs for context
+  contextDifficultySpectra: (context: string, difficulty: string) => buildKey('content', 'context', context, 'difficulty', difficulty.toLowerCase()), // set: spectrum IDs for context+difficulty
+  contextSummary: buildKey('content', 'context-summary'), // hash: context statistics
   draft: (draftId: string) => buildKey('drafts', draftId),
   gameMetadata: (gameId: string) => buildKey('games', 'metadata', gameId),
   gameState: (state: GamePhase) => gameStateKey(state),

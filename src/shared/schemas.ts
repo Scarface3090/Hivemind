@@ -7,17 +7,22 @@ import {
   GamePhase,
   GuessSource,
   MedianFreshness,
-  SpectrumCategory,
   SpectrumDifficulty,
 } from './enums.js';
 import { DEFAULT_PAGINATION_LIMIT, MAX_GUESS_VALUE, MIN_GUESS_VALUE } from './constants.js';
 
 export const spectrumSchema = z.object({
   id: z.string().min(1),
-  leftLabel: z.string().min(1),
-  rightLabel: z.string().min(1),
-  difficulty: z.nativeEnum(SpectrumDifficulty).optional(),
-  category: z.nativeEnum(SpectrumCategory).optional(),
+  leftLabel: z.string().min(1).max(50), // Max length validation as per requirements
+  rightLabel: z.string().min(1).max(50), // Max length validation as per requirements
+  difficulty: z.nativeEnum(SpectrumDifficulty),
+  context: z.string().min(1), // Dynamic context string instead of fixed enum
+});
+
+export const contextSummarySchema = z.object({
+  context: z.string().min(1),
+  totalCount: z.number().int().nonnegative(),
+  difficultyBreakdown: z.record(z.nativeEnum(SpectrumDifficulty), z.number().int().nonnegative()),
 });
 
 export const gameTimingSchema = z.object({
@@ -134,13 +139,20 @@ export const gameResultsSchema = gameWithGuessesSchema.extend({
   viewer: gameResultsViewerSchema.optional(),
 });
 
-export const draftRequestSchema = z.object({}).optional().default({});
+export const draftRequestSchema = z.object({
+  context: z.string().min(1).optional(), // Optional context filter
+  difficulty: z.nativeEnum(SpectrumDifficulty).optional(), // Optional difficulty filter
+}).optional().default({});
 
 export const draftResponseSchema = z.object({
   draftId: z.string().min(1),
   spectrum: spectrumSchema,
   secretTarget: z.number().int().min(MIN_GUESS_VALUE).max(MAX_GUESS_VALUE),
   expiresAt: z.string().datetime(),
+});
+
+export const contextsResponseSchema = z.object({
+  contexts: z.array(contextSummarySchema),
 });
 
 export const publishGameRequestSchema = z.object({

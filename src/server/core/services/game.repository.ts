@@ -38,6 +38,96 @@ const serializeMetadata = (metadata: GameMetadata): Record<string, string> => ({
 
 export const saveSpectrumCache = async (record: SpectrumCacheRecord): Promise<void> => {
   await redis.set(redisKeys.spectrumCache, JSON.stringify(record));
+  
+  // Also populate context indexes for efficient filtering
+  await populateContextIndexes(record.spectra);
+};
+
+const populateContextIndexes = async (spectra: Spectrum[]): Promise<void> => {
+  console.log('Populating context indexes...');
+  
+  // Clear existing indexes by deleting keys directly
+  // We'll use a simple approach: delete all context-related keys and rebuild
+  const contextIndexKey = redisKeys.contextIndex;
+  await redis.del(contextIndexKey);
+  await redis.del(redisKeys.contextSummary);
+  
+  // Build new indexes
+  const contextMap = new Map<string, { total: number; difficulties: Record<string, number> }>();
+  const contextSpectraMap = new Map<string, string[]>();
+  const contextDifficultyMap = new Map<string, string[]>();
+  
+  for (const spectrum of spectra) {
+    const { context, difficulty, id } = spectrum;
+    
+    // Add to context index (using sorted set with score 0)
+    await redis.zAdd(contextIndexKey, { member: context, score: 0 });
+    
+    // Collect spectrum IDs for batch operations
+    const contextKey = redisKeys.contextSpectra(context);
+    if (!contextSpectraMap.has(contextKey)) {
+      contextSpectraMap.set(contextKey, []);
+      await redis.del(contextKey); // Clear existing data
+    }
+    contextSpectraMap.get(contextKey)!.push(id);
+    
+    // Collect context+difficulty spectrum IDs
+    const contextDifficultyKey = redisKeys.contextDifficultySpectra(context, difficulty.toLowerCase());
+    if (!contextDifficultyMap.has(contextDifficultyKey)) {
+      contextDifficultyMap.set(contextDifficultyKey, []);
+      await redis.del(contextDifficultyKey); // Clear existing data
+    }
+    contextDifficultyMap.get(contextDifficultyKey)!.push(id);
+    
+    // Track counts for summary
+    if (!contextMap.has(context)) {
+      contextMap.set(context, {
+        total: 0,
+        difficulties: { easy: 0, medium: 0, hard: 0 },
+      });
+    }
+    
+    const contextData = contextMap.get(context)!;
+    contextData.total++;
+    const difficultyKey = difficulty.toLowerCase();
+    switch (difficultyKey) {
+      case 'easy':
+        contextData.difficulties.easy = (contextData.difficulties.easy || 0) + 1;
+        break;
+      case 'medium':
+        contextData.difficulties.medium = (contextData.difficulties.medium || 0) + 1;
+        break;
+      case 'hard':
+        contextData.difficulties.hard = (contextData.difficulties.hard || 0) + 1;
+        break;
+    }
+  }
+  
+  // Batch add spectrum IDs to context sets
+  for (const [key, spectrumIds] of contextSpectraMap.entries()) {
+    for (const id of spectrumIds) {
+      await redis.zAdd(key, { member: id, score: 0 });
+    }
+  }
+  
+  // Batch add spectrum IDs to context+difficulty sets
+  for (const [key, spectrumIds] of contextDifficultyMap.entries()) {
+    for (const id of spectrumIds) {
+      await redis.zAdd(key, { member: id, score: 0 });
+    }
+  }
+  
+  // Save context summary
+  const summaryData: Record<string, string> = {};
+  for (const [context, data] of contextMap.entries()) {
+    summaryData[context] = JSON.stringify(data);
+  }
+  
+  if (Object.keys(summaryData).length > 0) {
+    await redis.hSet(redisKeys.contextSummary, summaryData);
+  }
+  
+  console.log(`Context indexes populated for ${contextMap.size} contexts`);
 };
 
 export const getSpectrumCacheRecord = async (): Promise<SpectrumCacheRecord | null> => {
@@ -200,4 +290,41 @@ export const saveGameResults = async (results: GameResults): Promise<void> => {
 export const getStoredGameResults = async (gameId: string): Promise<GameResults | null> => {
   const value = await redis.get(redisKeys.gameResults(gameId));
   return value ? (JSON.parse(value) as GameResults) : null;
+};
+
+// Context-based caching functions
+
+export const getAvailableContextsFromCache = async (): Promise<string[]> => {
+  const entries = await redis.zRange(redisKeys.contextIndex, 0, -1, { by: 'rank' });
+  const contexts = entries.map(entry => entry.member);
+  return contexts.sort();
+};
+
+export const getSpectrumIdsForContext = async (context: string, difficulty?: string): Promise<string[]> => {
+  const key = difficulty 
+    ? redisKeys.contextDifficultySpectra(context, difficulty.toLowerCase())
+    : redisKeys.contextSpectra(context);
+  
+  const entries = await redis.zRange(key, 0, -1, { by: 'rank' });
+  return entries.map(entry => entry.member);
+};
+
+export const getContextSummaryFromCache = async (): Promise<Record<string, { total: number; difficulties: Record<string, number> }>> => {
+  const summaryData = await redis.hGetAll(redisKeys.contextSummary);
+  const result: Record<string, { total: number; difficulties: Record<string, number> }> = {};
+  
+  for (const [context, dataStr] of Object.entries(summaryData)) {
+    try {
+      result[context] = JSON.parse(dataStr);
+    } catch (error) {
+      console.warn(`Failed to parse context summary for ${context}:`, error);
+    }
+  }
+  
+  return result;
+};
+
+export const isContextCachePopulated = async (): Promise<boolean> => {
+  const contextCount = await redis.zCard(redisKeys.contextIndex);
+  return contextCount > 0;
 };

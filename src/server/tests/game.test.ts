@@ -3,7 +3,7 @@ import * as redis from '@devvit/web/server';
 import { computeGameResults, getGameResults } from '../core/services/scoring.service.js';
 import * as lifecycle from '../core/services/game.lifecycle.js';
 import * as repository from '../core/services/game.repository.js';
-import { GamePhase, ClueClarityRating, ConsensusLabelType } from '../../shared/enums.js';
+import { GamePhase, ClueClarityRating, ConsensusLabelType, SpectrumDifficulty } from '../../shared/enums.js';
 
 vi.mock('@devvit/web/server', () => ({
   redis: {
@@ -43,6 +43,8 @@ describe('Scoring Service', () => {
         id: 'spec-1',
         leftLabel: 'Cold',
         rightLabel: 'Hot',
+        difficulty: SpectrumDifficulty.Easy,
+        context: 'Test',
       },
       secretTarget: 70,
       timing: {
@@ -109,7 +111,7 @@ describe('Scoring Service', () => {
       hostUsername: 'host',
       clue: 'clue',
       state: GamePhase.Reveal,
-      spectrum: { id: 's', leftLabel: 'L', rightLabel: 'R' },
+      spectrum: { id: 's', leftLabel: 'L', rightLabel: 'R', difficulty: SpectrumDifficulty.Easy, context: 'Test' },
       secretTarget: 50,
       timing: { startTime: new Date().toISOString(), endTime: new Date().toISOString(), createdAt: new Date().toISOString() },
       totalParticipants: 0,

@@ -7,6 +7,8 @@ import type {
   GamePollingResponse,
   GuessRequest,
   GuessResponse,
+  ContextsResponse,
+  EnhancedDraftRequest,
 } from '../../shared/api.js';
 import type { GameResults } from '../../shared/types/Game.js';
 import { apiClient } from './client.js';
@@ -15,6 +17,12 @@ const API_BASE = '/api/games';
 
 export const requestDraft = (payload?: DraftRequest): Promise<DraftResponse> =>
   apiClient.post<DraftResponse, DraftRequest>(`${API_BASE}/draft`, payload ?? ({} as DraftRequest));
+
+export const requestFilteredDraft = (payload: EnhancedDraftRequest): Promise<DraftResponse> =>
+  apiClient.post<DraftResponse, EnhancedDraftRequest>(`${API_BASE}/draft`, payload);
+
+export const getContexts = (): Promise<ContextsResponse> =>
+  apiClient.get<ContextsResponse>('/api/contexts');
 
 export const publishGame = (
   payload: PublishGameRequest

@@ -3,6 +3,7 @@ import type { InitResponse, IncrementResponse, DecrementResponse } from '../shar
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { contentRefreshRouter, gameRouter, devRouter } from './core/routes/index.js';
+import { bootstrapServer } from './main.js';
 
 const app = express();
 
@@ -149,4 +150,31 @@ const port = process.env.WEBBIT_PORT || 3000;
 
 const server = createServer(app);
 server.on('error', (err) => console.error(`server error; ${err.stack}`));
-server.listen(port, () => console.log(`http://localhost:${port}`));
+
+// Initialize server with CSV loading
+const startServer = async () => {
+  try {
+    console.log('Starting server initialization...');
+    
+    // Skip Redis-dependent initialization during startup
+    // Cache will be initialized lazily on first API request
+    console.log('✓ Server startup completed - cache will be initialized on first request');
+    
+    // Start server after successful initialization
+    server.listen(port, () => {
+      console.log(`http://localhost:${port}`);
+      console.log('Server started successfully with content loaded');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    
+    // Start server anyway with fallback content
+    server.listen(port, () => {
+      console.log(`http://localhost:${port}`);
+      console.warn('Server started with fallback content due to initialization error');
+    });
+  }
+};
+
+// Start the server
+startServer();

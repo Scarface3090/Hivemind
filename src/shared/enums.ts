@@ -6,17 +6,12 @@ export enum GamePhase {
 }
 
 export enum SpectrumDifficulty {
-  Low = 'LOW',
-  Moderate = 'MODERATE',
+  Easy = 'EASY',
+  Medium = 'MEDIUM',
   Hard = 'HARD',
 }
 
-export enum SpectrumCategory {
-  Movies = 'MOVIES',
-  Gaming = 'GAMING',
-  Science = 'SCIENCE',
-  General = 'GENERAL',
-}
+// Note: SpectrumCategory enum removed - now using dynamic string values from CSV
 
 export enum AccoladeType {
   Psychic = 'PSYCHIC',
