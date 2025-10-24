@@ -105,14 +105,8 @@ export const DifficultySelector = ({
                 isSelected ? 'difficulty-option--selected' : ''
               } ${isDisabled ? 'difficulty-option--disabled' : ''}`}
               onClick={() => {
-                if (!isDisabled) {
-                  try {
-                    // Optimistic UI update
-                    onDifficultySelect(option.level);
-                  } catch (error) {
-                    onError?.(error instanceof Error ? error : new Error('Failed to select difficulty'));
-                  }
-                }
+                // Optimistic UI update
+                onDifficultySelect(option.level);
               }}
               disabled={isDisabled}
               aria-pressed={isSelected}
@@ -152,7 +146,7 @@ export const DifficultySelector = ({
         })}
       </div>
 
-      {contextData && Object.values(contextData.difficultyBreakdown).every(count => count === 0) && (
+      {contextData && Object.values(contextData?.difficultyBreakdown ?? {}).every(count => count === 0) && (
         <div className="difficulty-selector__empty">
           <p className="host-form__error">
             No spectra available for the selected context. Please choose a different context.

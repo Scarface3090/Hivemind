@@ -748,6 +748,43 @@ export const getFilteredSpectrum = async (context?: string, difficulty?: Spectru
   }
 };
 
+/**
+ * Private helper function to calculate context summaries from spectra array
+ */
+const calculateContextSummaries = (spectra: Spectrum[]): import('../../../shared/types/Spectrum.js').ContextSummary[] => {
+  const contextMap = new Map<string, { total: number; difficulties: Record<SpectrumDifficulty, number> }>();
+  
+  // Initialize difficulty counts
+  const initDifficulties = (): Record<SpectrumDifficulty, number> => ({
+    [SpectrumDifficulty.Easy]: 0,
+    [SpectrumDifficulty.Medium]: 0,
+    [SpectrumDifficulty.Hard]: 0,
+  });
+  
+  // Count spectra by context and difficulty
+  spectra.forEach(spectrum => {
+    if (!contextMap.has(spectrum.context)) {
+      contextMap.set(spectrum.context, {
+        total: 0,
+        difficulties: initDifficulties(),
+      });
+    }
+    
+    const contextData = contextMap.get(spectrum.context)!;
+    contextData.total++;
+    contextData.difficulties[spectrum.difficulty]++;
+  });
+  
+  // Convert to ContextSummary array
+  return Array.from(contextMap.entries())
+    .map(([context, data]) => ({
+      context,
+      totalCount: data.total,
+      difficultyBreakdown: data.difficulties,
+    }))
+    .sort((a, b) => a.context.localeCompare(b.context));
+};
+
 export const getContextsWithCounts = async (): Promise<import('../../../shared/types/Spectrum.js').ContextSummary[]> => {
   try {
     console.log('Getting contexts with counts...');
@@ -755,39 +792,10 @@ export const getContextsWithCounts = async (): Promise<import('../../../shared/t
     // Always calculate from spectra array for now to avoid Redis context issues
     // TODO: Re-enable context cache once Redis context issues are resolved
     const spectra = await ensureSpectrumCache();
-    const contextMap = new Map<string, { total: number; difficulties: Record<SpectrumDifficulty, number> }>();
     
     console.log(`Calculating context statistics for ${spectra.length} spectra`);
     
-    // Initialize difficulty counts
-    const initDifficulties = (): Record<SpectrumDifficulty, number> => ({
-      [SpectrumDifficulty.Easy]: 0,
-      [SpectrumDifficulty.Medium]: 0,
-      [SpectrumDifficulty.Hard]: 0,
-    });
-    
-    // Count spectra by context and difficulty
-    spectra.forEach(spectrum => {
-      if (!contextMap.has(spectrum.context)) {
-        contextMap.set(spectrum.context, {
-          total: 0,
-          difficulties: initDifficulties(),
-        });
-      }
-      
-      const contextData = contextMap.get(spectrum.context)!;
-      contextData.total++;
-      contextData.difficulties[spectrum.difficulty]++;
-    });
-    
-    // Convert to ContextSummary array
-    const contextSummaries = Array.from(contextMap.entries())
-      .map(([context, data]) => ({
-        context,
-        totalCount: data.total,
-        difficultyBreakdown: data.difficulties,
-      }))
-      .sort((a, b) => a.context.localeCompare(b.context));
+    const contextSummaries = calculateContextSummaries(spectra);
     
     console.log(`Generated context summaries for ${contextSummaries.length} contexts`);
     contextSummaries.forEach(summary => {
@@ -799,34 +807,7 @@ export const getContextsWithCounts = async (): Promise<import('../../../shared/t
     console.error('Failed to get contexts with counts, using fallback:', error);
     // Calculate from validated fallback spectra
     const fallbackSpectra = getFallbackSpectra();
-    const contextMap = new Map<string, { total: number; difficulties: Record<SpectrumDifficulty, number> }>();
-    
-    const initDifficulties = (): Record<SpectrumDifficulty, number> => ({
-      [SpectrumDifficulty.Easy]: 0,
-      [SpectrumDifficulty.Medium]: 0,
-      [SpectrumDifficulty.Hard]: 0,
-    });
-    
-    fallbackSpectra.forEach(spectrum => {
-      if (!contextMap.has(spectrum.context)) {
-        contextMap.set(spectrum.context, {
-          total: 0,
-          difficulties: initDifficulties(),
-        });
-      }
-      
-      const contextData = contextMap.get(spectrum.context)!;
-      contextData.total++;
-      contextData.difficulties[spectrum.difficulty]++;
-    });
-    
-    return Array.from(contextMap.entries())
-      .map(([context, data]) => ({
-        context,
-        totalCount: data.total,
-        difficultyBreakdown: data.difficulties,
-      }))
-      .sort((a, b) => a.context.localeCompare(b.context));
+    return calculateContextSummaries(fallbackSpectra);
   }
 };
 

@@ -156,9 +156,8 @@ const startServer = async () => {
   try {
     console.log('Starting server initialization...');
     
-    // Skip Redis-dependent initialization during startup
-    // Cache will be initialized lazily on first API request
-    console.log('✓ Server startup completed - cache will be initialized on first request');
+    // Run bootstrap initialization to load CSV content and setup cache
+    await bootstrapServer();
     
     // Start server after successful initialization
     server.listen(port, () => {

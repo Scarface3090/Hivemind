@@ -46,7 +46,6 @@ const HostView = (): JSX.Element => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'context' | 'difficulty' | 'clue'>('context');
   const [selectedContextData, setSelectedContextData] = useState<ContextSummary | null>(null);
-  const [contextError, setContextError] = useState<string | null>(null);
 
   // Fetch available contexts
   const { data: contextsData } = useQuery({
@@ -81,11 +80,11 @@ const HostView = (): JSX.Element => {
 
   const draftMutation = useMutation({
     mutationKey: ['host', 'draft'],
-    mutationFn: () => {
-      if (formState.selectedContext && formState.selectedDifficulty) {
+    mutationFn: (params?: { context?: string; difficulty?: string }) => {
+      if (params?.context && params?.difficulty) {
         return requestFilteredDraft({
-          context: formState.selectedContext,
-          difficulty: formState.selectedDifficulty,
+          context: params.context,
+          difficulty: params.difficulty,
         });
       }
       return requestDraft();
@@ -126,12 +125,10 @@ const HostView = (): JSX.Element => {
     setSelectedContextData(contextData);
     setCurrentStep('difficulty');
     setLastDraft(null); // Clear any existing draft
-    setContextError(null); // Clear any context errors
   }, [contextsData]);
 
   // Handle context selection errors
   const handleContextError = useCallback((error: Error) => {
-    setContextError(error.message);
     setFormState((prev) => ({
       ...prev,
       errors: {
@@ -166,11 +163,13 @@ const HostView = (): JSX.Element => {
     setCurrentStep('clue');
     
     // Automatically fetch draft when both context and difficulty are selected
-    if (formState.selectedContext) {
-      setStatus('drafting');
-      setStatusMessage('Generating your spectrum...');
-      draftMutation.mutate();
-    }
+    // Pass context and difficulty directly to avoid stale formState
+    setStatus('drafting');
+    setStatusMessage('Generating your spectrum...');
+    draftMutation.mutate({ 
+      ...(formState.selectedContext && { context: formState.selectedContext }),
+      difficulty 
+    });
   }, [formState.selectedContext, draftMutation]);
 
   // Navigation handlers
@@ -239,14 +238,20 @@ const HostView = (): JSX.Element => {
         if (!lastDraft) {
           setStatus('drafting');
           setStatusMessage('Preparing your spectrum...');
-          const draft = await draftMutation.mutateAsync();
+          const draft = await draftMutation.mutateAsync({
+            ...(formState.selectedContext && { context: formState.selectedContext }),
+            ...(formState.selectedDifficulty && { difficulty: formState.selectedDifficulty })
+          });
           setLastDraft(draft);
         }
 
         setStatus('publishing');
         setStatusMessage('Publishing your game to the feed...');
         await publishMutation.mutateAsync({
-          draftId: (lastDraft ?? (await draftMutation.mutateAsync())).draftId,
+          draftId: (lastDraft ?? (await draftMutation.mutateAsync({
+            ...(formState.selectedContext && { context: formState.selectedContext }),
+            ...(formState.selectedDifficulty && { difficulty: formState.selectedDifficulty })
+          }))).draftId,
           clue: formState.clue.trim(),
           durationMinutes: formState.durationMinutes!,
         });

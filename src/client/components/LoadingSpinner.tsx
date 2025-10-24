@@ -23,7 +23,9 @@ export const LoadingSpinner = ({
       {message && (
         <span className="loading-spinner__message">{message}</span>
       )}
-      <span className="sr-only">Loading...</span>
+      {!message && (
+        <span className="sr-only">Loading...</span>
+      )}
     </div>
   );
 };

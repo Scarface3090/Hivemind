@@ -40,34 +40,34 @@ export const saveSpectrumCache = async (record: SpectrumCacheRecord): Promise<vo
   await redis.set(redisKeys.spectrumCache, JSON.stringify(record));
   
   // Also populate context indexes for efficient filtering
-  await populateContextIndexes(record.spectra);
+  // Fire-and-forget to avoid blocking cache save if indexing fails
+  populateContextIndexes(record.spectra).catch(err => 
+    console.error(`Failed to populate context indexes for record with ${record.spectra.length} spectra:`, err)
+  );
 };
 
 const populateContextIndexes = async (spectra: Spectrum[]): Promise<void> => {
   console.log('Populating context indexes...');
   
-  // Clear existing indexes by deleting keys directly
-  // We'll use a simple approach: delete all context-related keys and rebuild
-  const contextIndexKey = redisKeys.contextIndex;
-  await redis.del(contextIndexKey);
-  await redis.del(redisKeys.contextSummary);
-  
-  // Build new indexes
+  // Build new indexes and collect keys for bulk operations
   const contextMap = new Map<string, { total: number; difficulties: Record<string, number> }>();
   const contextSpectraMap = new Map<string, string[]>();
   const contextDifficultyMap = new Map<string, string[]>();
+  const uniqueContexts = new Set<string>();
+  const keysToDelete = new Set<string>();
   
+  // Collect all data during the loop without awaiting Redis calls
   for (const spectrum of spectra) {
     const { context, difficulty, id } = spectrum;
     
-    // Add to context index (using sorted set with score 0)
-    await redis.zAdd(contextIndexKey, { member: context, score: 0 });
+    // Track unique contexts for bulk zAdd
+    uniqueContexts.add(context);
     
     // Collect spectrum IDs for batch operations
     const contextKey = redisKeys.contextSpectra(context);
     if (!contextSpectraMap.has(contextKey)) {
       contextSpectraMap.set(contextKey, []);
-      await redis.del(contextKey); // Clear existing data
+      keysToDelete.add(contextKey); // Mark for deletion
     }
     contextSpectraMap.get(contextKey)!.push(id);
     
@@ -75,7 +75,7 @@ const populateContextIndexes = async (spectra: Spectrum[]): Promise<void> => {
     const contextDifficultyKey = redisKeys.contextDifficultySpectra(context, difficulty.toLowerCase());
     if (!contextDifficultyMap.has(contextDifficultyKey)) {
       contextDifficultyMap.set(contextDifficultyKey, []);
-      await redis.del(contextDifficultyKey); // Clear existing data
+      keysToDelete.add(contextDifficultyKey); // Mark for deletion
     }
     contextDifficultyMap.get(contextDifficultyKey)!.push(id);
     
@@ -103,29 +103,53 @@ const populateContextIndexes = async (spectra: Spectrum[]): Promise<void> => {
     }
   }
   
-  // Batch add spectrum IDs to context sets
+  // Add main index keys to deletion set
+  keysToDelete.add(redisKeys.contextIndex);
+  keysToDelete.add(redisKeys.contextSummary);
+  
+  // Perform bulk Redis operations using transaction
+  const txn = await redis.watch(redisKeys.contextIndex, redisKeys.contextSummary);
+  
+  await txn.multi(); // Begin transaction
+  
+  // 1. Delete all collected keys in one operation
+  if (keysToDelete.size > 0) {
+    await txn.del(...Array.from(keysToDelete));
+  }
+  
+  // 2. Add all unique contexts to the main index in one zAdd operation
+  if (uniqueContexts.size > 0) {
+    const contextMembers = Array.from(uniqueContexts).map(context => ({ member: context, score: 0 }));
+    await txn.zAdd(redisKeys.contextIndex, ...contextMembers);
+  }
+  
+  // 3. Add spectrum IDs to context sets using transaction
   for (const [key, spectrumIds] of contextSpectraMap.entries()) {
-    for (const id of spectrumIds) {
-      await redis.zAdd(key, { member: id, score: 0 });
+    if (spectrumIds.length > 0) {
+      const members = spectrumIds.map(id => ({ member: id, score: 0 }));
+      await txn.zAdd(key, ...members);
     }
   }
   
-  // Batch add spectrum IDs to context+difficulty sets
+  // 4. Add spectrum IDs to context+difficulty sets using transaction
   for (const [key, spectrumIds] of contextDifficultyMap.entries()) {
-    for (const id of spectrumIds) {
-      await redis.zAdd(key, { member: id, score: 0 });
+    if (spectrumIds.length > 0) {
+      const members = spectrumIds.map(id => ({ member: id, score: 0 }));
+      await txn.zAdd(key, ...members);
     }
   }
   
-  // Save context summary
-  const summaryData: Record<string, string> = {};
-  for (const [context, data] of contextMap.entries()) {
-    summaryData[context] = JSON.stringify(data);
+  // 5. Save context summary
+  if (contextMap.size > 0) {
+    const summaryData: Record<string, string> = {};
+    for (const [context, data] of contextMap.entries()) {
+      summaryData[context] = JSON.stringify(data);
+    }
+    await txn.hSet(redisKeys.contextSummary, summaryData);
   }
   
-  if (Object.keys(summaryData).length > 0) {
-    await redis.hSet(redisKeys.contextSummary, summaryData);
-  }
+  // Execute all operations in one transaction
+  await txn.exec();
   
   console.log(`Context indexes populated for ${contextMap.size} contexts`);
 };
