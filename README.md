@@ -74,6 +74,7 @@ Built as a monorepo with three main components:
 ### Interactive Gameplay
 - **Phaser Slider** - Touch-optimized spectrum selection
 - **Justification System** - Optional reasoning that affects scoring
+- **Reddit Comment Integration** - Player guesses and justifications automatically posted as Reddit comments ✨ **NEW**
 - **Median Visualization** - Live community consensus indicator
 - **Mobile-First Design** - Optimized for vertical, touch screens
 
@@ -98,6 +99,34 @@ Built as a monorepo with three main components:
 - **Quality**: ESLint + Prettier + Vitest testing
 
 ## 🔌 New API Endpoints ✨
+
+### Social Integration System ✨ **NEW**
+Enhanced guess submission with automatic Reddit comment integration:
+
+```bash
+# Guess Submission with Reddit Integration
+POST /api/games/:gameId/guesses     # Submit guess with automatic Reddit comment posting
+
+# Guess Request (enhanced with Reddit integration)
+{
+  "value": 75,                      # Player's guess value (0-100)
+  "justification": "Optional reasoning text"  # Posted as Reddit comment if provided
+}
+
+# Guess Response (enhanced with comment tracking)
+{
+  "guess": {
+    "guessId": "guess_123",
+    "value": 75,
+    "justification": "Optional reasoning",
+    "redditCommentId": "t1_abc123"  # NEW: Reddit comment ID for social scoring
+  },
+  "median": {
+    "median": 68.5,
+    "sampleSize": 12
+  }
+}
+```
 
 ### Dynamic Content System
 Enhanced content management with context and difficulty filtering:
@@ -274,7 +303,7 @@ npm run launch        # Deploy and publish for review
 ## 🎮 Game Flow
 
 1. **Host Flow**: Choose context & difficulty → Receive filtered spectrum + secret target → Add clue → Publish
-2. **Player Flow**: Click game post → Automatically routed to guessing interface → See median → Submit guess + justification  
+2. **Player Flow**: Click game post → Automatically routed to guessing interface → See median → Submit guess + justification → **Automatic Reddit comment posting** ✨ **NEW**
 3. **Results**: View accuracy scores → Social influence metrics → Community consensus → Accolades
 
 ### Enhanced Host Experience ✨ NEW
@@ -286,7 +315,8 @@ npm run launch        # Deploy and publish for review
 
 ## 🔧 Configuration
 
-- **Devvit Config**: `devvit.json` - Platform settings, scheduler, menu items
+- **Devvit Config**: `devvit.json` - Platform settings, scheduler, menu items, Reddit permissions ✨ **ENHANCED**
+- **Reddit Permissions**: `SUBMIT_COMMENT` permission enabled for automatic comment posting
 - **TypeScript**: Project references for monorepo structure
 - **Build**: Vite configs for client/server with different targets
 - **Content Management**: Multi-tier content system with flexible configuration
@@ -481,6 +511,14 @@ The direct game entry system is **fully implemented and operational**. Users cli
 - Game state validation ensures users see appropriate interface
 
 ## 🆕 Recent Updates
+
+### Latest Social Integration Updates ✨ NEW
+- ✅ **Automatic Reddit Comment Integration**: Player guesses with justifications are now automatically posted as Reddit comments under the game post
+- ✅ **Enhanced Guess Submission**: Guess service now handles Reddit comment posting with proper error handling and fallback behavior
+- ✅ **Comment ID Tracking**: Each guess now tracks its associated Reddit comment ID for future social scoring integration
+- ✅ **Robust Comment Posting**: Comment posting failures don't prevent guess submission - the guess is always persisted first
+- ✅ **Debug Logging**: Comprehensive logging for Reddit comment integration with detailed error tracking
+- ✅ **User Context Integration**: Proper user authentication and context handling for Reddit API calls
 
 ### Latest Performance & Reliability Updates ✨ NEW
 - ✅ **Optimized Game Lifecycle**: Removed redundant spectrum validation in game metadata hydration for improved performance
