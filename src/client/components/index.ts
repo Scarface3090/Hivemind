@@ -1,4 +1,4 @@
-export { default as ActiveGameCard } from './ActiveGameCard.js';
+export { ActiveGameCard } from './ActiveGameCard.js';
 export { default as HistogramPhaser } from './HistogramPhaser.js';
 export { default as SpectrumPill } from './SpectrumPill.js';
 export { default as SpectrumSlider } from './SpectrumSlider.js';
@@ -9,3 +9,7 @@ export { default as DifficultySelector } from './DifficultySelector.js';
 export { ContextSelectionErrorBoundary } from './ContextSelectionErrorBoundary.js';
 export { LoadingSpinner } from './LoadingSpinner.js';
 export { ContentErrorMessage } from './ContentErrorMessage.js';
+export { GameContextRouter } from './GameContextRouter.js';
+export { GameContextErrorBoundary } from './GameContextErrorBoundary.js';
+export { GameContextDebugger } from './GameContextDebugger.js';
+export { GameContextLayout } from './GameContextLayout.js';

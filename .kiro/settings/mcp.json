@@ -4,11 +4,10 @@
       "command": "npx",
       "args": [
         "-y",
-        "@devvit/mcp"
+        "@devvit/mcp@0.0.21"
       ],
       "disabled": false,
       "autoApprove": [
-        "devvit_search",
         "devvit_search"
       ]
     }

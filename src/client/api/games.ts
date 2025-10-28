@@ -9,6 +9,7 @@ import type {
   GuessResponse,
   ContextsResponse,
   EnhancedDraftRequest,
+  GameContextResponse,
 } from '../../shared/api.js';
 import type { GameResults } from '../../shared/types/Game.js';
 import { apiClient } from './client.js';
@@ -59,5 +60,8 @@ export const submitGuess = (
 
 export const getGameResults = (gameId: string): Promise<GameResults> =>
   apiClient.get<GameResults>(`${API_BASE}/${gameId}/results`);
+
+export const getGameContext = (): Promise<GameContextResponse> =>
+  apiClient.get<GameContextResponse>('/api/context');
 
 

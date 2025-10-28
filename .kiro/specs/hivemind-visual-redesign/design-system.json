@@ -1,0 +1,441 @@
+{
+  "designSystem": {
+    "metadata": {
+      "version": "1.0.0",
+      "name": "Hivemind Visual Redesign",
+      "description": "Comprehensive design system for enhanced Hivemind game interface",
+      "assetSource": "FinalFiles_PNG reference assets"
+    },
+    "colors": {
+      "primary": {
+        "brand": "#2B4C7E",
+        "brandLight": "#4A6FA5",
+        "brandDark": "#1E3A5F",
+        "accent": "#FF6B35",
+        "accentLight": "#FF8A65",
+        "accentDark": "#E55722"
+      },
+      "background": {
+        "main": "#F5F1E8",
+        "secondary": "#FFFFFF",
+        "tertiary": "#2B4C7E",
+        "overlay": "rgba(245, 241, 232, 0.95)",
+        "paper": "#F5F1E8",
+        "card": "#FFFFFF"
+      },
+      "text": {
+        "primary": "#2C3E50",
+        "secondary": "#34495E",
+        "muted": "#7F8C8D",
+        "accent": "#FF6B35",
+        "onDark": "#FFFFFF"
+      },
+      "interactive": {
+        "join": "#4CAF50",
+        "joinHover": "#66BB6A",
+        "joinActive": "#388E3C",
+        "host": "#00BCD4",
+        "hostHover": "#26C6DA",
+        "hostActive": "#0097A7",
+        "slider": "linear-gradient(90deg, #FF6B35 0%, #4CAF50 50%, #00BCD4 100%)",
+        "sliderThumb": "#FFFFFF"
+      },
+      "brushStrokes": {
+        "orange": "#FF6B35",
+        "green": "#4CAF50",
+        "teal": "#00BCD4",
+        "red": "#E74C3C",
+        "yellow": "#F1C40F"
+      },
+      "decorative": {
+        "dots": "#7986CB",
+        "lines": "#BDC3C7",
+        "shadows": "rgba(0, 0, 0, 0.1)"
+      },
+      "particles": {
+        "primary": "#FF6B35",
+        "secondary": "#4CAF50",
+        "tertiary": "#00BCD4",
+        "trail": "#7986CB",
+        "burst": "#F1C40F"
+      }
+    },
+    "typography": {
+      "fontFamilies": {
+        "primary": "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+        "display": "Fredoka One, cursive",
+        "handwritten": "Kalam, cursive",
+        "body": "Open Sans, sans-serif"
+      },
+      "fontSizes": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem",
+        "5xl": "3rem",
+        "6xl": "3.75rem"
+      },
+      "fontWeights": {
+        "light": 300,
+        "normal": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700,
+        "extrabold": 800
+      },
+      "lineHeights": {
+        "tight": 1.25,
+        "snug": 1.375,
+        "normal": 1.5,
+        "relaxed": 1.625,
+        "loose": 2
+      }
+    },
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem",
+      "3xl": "4rem",
+      "4xl": "6rem",
+      "5xl": "8rem"
+    },
+    "borderRadius": {
+      "none": "0",
+      "sm": "0.125rem",
+      "md": "0.375rem",
+      "lg": "0.5rem",
+      "xl": "0.75rem",
+      "2xl": "1rem",
+      "3xl": "1.5rem",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+      "xl": "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+      "glow": "0 0 20px rgba(99, 102, 241, 0.3)",
+      "glowAccent": "0 0 20px rgba(245, 158, 11, 0.3)"
+    },
+    "animations": {
+      "durations": {
+        "fast": "150ms",
+        "normal": "300ms",
+        "slow": "500ms",
+        "slower": "750ms",
+        "slowest": "1000ms"
+      },
+      "easings": {
+        "linear": "linear",
+        "easeIn": "cubic-bezier(0.4, 0, 1, 1)",
+        "easeOut": "cubic-bezier(0, 0, 0.2, 1)",
+        "easeInOut": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "bounce": "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        "elastic": "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+      },
+      "particles": {
+        "trailDuration": "800ms",
+        "burstDuration": "600ms",
+        "ambientDuration": "2000ms",
+        "floatDuration": "3000ms"
+      }
+    },
+    "components": {
+      "splash": {
+        "background": "#2B4C7E",
+        "logo": {
+          "fontFamily": "Fredoka One",
+          "fontSize": "48px",
+          "color": "#FFFFFF",
+          "textShadow": "2px 2px 4px rgba(0, 0, 0, 0.3)"
+        },
+        "brushStrokes": {
+          "colors": ["#FF6B35", "#4CAF50", "#00BCD4", "#F1C40F"],
+          "animation": "brushStroke 1200ms ease-out"
+        },
+        "particles": {
+          "count": 30,
+          "colors": ["#FF6B35", "#4CAF50", "#00BCD4"],
+          "speed": "slow",
+          "size": "3-12px",
+          "style": "organic"
+        },
+        "animation": {
+          "fadeIn": "800ms ease-out",
+          "logoAppear": "1000ms ease-out",
+          "brushStrokesSequence": "1500ms ease-out",
+          "particleFloat": "2000ms ease-in-out infinite"
+        }
+      },
+      "buttons": {
+        "join": {
+          "background": "#4CAF50",
+          "color": "#FFFFFF",
+          "fontFamily": "Fredoka One",
+          "fontSize": "24px",
+          "padding": "16px 32px",
+          "borderRadius": "8px",
+          "border": "3px solid #2C3E50",
+          "transform": "rotate(-2deg)",
+          "boxShadow": "4px 4px 0px #2C3E50",
+          "brushStroke": {
+            "overlay": true,
+            "colors": ["#66BB6A", "#81C784"]
+          },
+          "hover": {
+            "transform": "rotate(-1deg) translateY(-2px)",
+            "boxShadow": "6px 6px 0px #2C3E50"
+          },
+          "particles": {
+            "onHover": true,
+            "colors": ["#4CAF50", "#66BB6A"],
+            "count": 8,
+            "style": "organic"
+          }
+        },
+        "host": {
+          "background": "#00BCD4",
+          "color": "#FFFFFF",
+          "fontFamily": "Fredoka One",
+          "fontSize": "24px",
+          "padding": "16px 32px",
+          "borderRadius": "8px",
+          "border": "3px solid #2C3E50",
+          "transform": "rotate(2deg)",
+          "boxShadow": "4px 4px 0px #2C3E50",
+          "brushStroke": {
+            "overlay": true,
+            "colors": ["#26C6DA", "#4DD0E1"]
+          },
+          "hover": {
+            "transform": "rotate(1deg) translateY(-2px)",
+            "boxShadow": "6px 6px 0px #2C3E50"
+          },
+          "particles": {
+            "onHover": true,
+            "colors": ["#00BCD4", "#26C6DA"],
+            "count": 8,
+            "style": "organic"
+          }
+        },
+        "submit": {
+          "background": "#FF6B35",
+          "color": "#FFFFFF",
+          "fontFamily": "Fredoka One",
+          "fontSize": "18px",
+          "padding": "12px 24px",
+          "borderRadius": "6px",
+          "border": "2px solid #2C3E50",
+          "boxShadow": "3px 3px 0px #2C3E50"
+        }
+      },
+      "cards": {
+        "base": {
+          "background": "rgba(255, 255, 255, 0.05)",
+          "border": "1px solid rgba(255, 255, 255, 0.1)",
+          "borderRadius": "2xl",
+          "backdropFilter": "blur(20px)",
+          "padding": "xl",
+          "shadow": "lg"
+        },
+        "game": {
+          "hover": {
+            "transform": "translateY(-4px)",
+            "shadow": "xl",
+            "border": "1px solid rgba(99, 102, 241, 0.3)"
+          },
+          "particles": {
+            "onHover": true,
+            "ambient": true
+          }
+        },
+        "context": {
+          "selected": {
+            "border": "2px solid #6366F1",
+            "shadow": "glow",
+            "background": "rgba(99, 102, 241, 0.1)"
+          }
+        }
+      },
+      "spectrum": {
+        "container": {
+          "background": "rgba(255, 255, 255, 0.05)",
+          "borderRadius": "3xl",
+          "padding": "lg",
+          "border": "1px solid rgba(255, 255, 255, 0.1)"
+        },
+        "slider": {
+          "track": {
+            "background": "linear-gradient(90deg, #6366F1 0%, #F59E0B 100%)",
+            "height": "8px",
+            "borderRadius": "full"
+          },
+          "thumb": {
+            "size": "24px",
+            "background": "#FFFFFF",
+            "shadow": "0 0 20px rgba(255, 255, 255, 0.5)",
+            "borderRadius": "full"
+          },
+          "particles": {
+            "trail": true,
+            "colors": ["#6366F1", "#F59E0B", "#818CF8"],
+            "onMove": true
+          }
+        }
+      },
+      "results": {
+        "histogram": {
+          "bars": {
+            "gradient": "linear-gradient(180deg, #6366F1 0%, #818CF8 100%)",
+            "animation": "slideUp 800ms ease-out",
+            "hover": {
+              "glow": "0 0 15px rgba(99, 102, 241, 0.5)"
+            }
+          },
+          "particles": {
+            "celebration": true,
+            "burst": true,
+            "colors": ["#6366F1", "#F59E0B", "#10B981"]
+          }
+        },
+        "accolades": {
+          "background": "linear-gradient(135deg, #F59E0B 0%, #FCD34D 100%)",
+          "animation": "bounceIn 600ms ease-out",
+          "particles": {
+            "sparkle": true,
+            "count": 20
+          }
+        }
+      },
+      "navigation": {
+        "transitions": {
+          "pageSlide": "300ms ease-in-out",
+          "fadeInOut": "250ms ease-in-out",
+          "scaleIn": "200ms bounce"
+        },
+        "breadcrumbs": {
+          "separator": "→",
+          "activeColor": "#6366F1",
+          "inactiveColor": "#94A3B8"
+        }
+      }
+    },
+    "particles": {
+      "systems": {
+        "ambient": {
+          "count": 20,
+          "size": "4-12px",
+          "colors": ["#7986CB", "#9FA8DA", "#C5CAE9"],
+          "speed": "0.3-1.0px/s",
+          "opacity": "0.4-0.8",
+          "movement": "float",
+          "style": "dots"
+        },
+        "brushStroke": {
+          "count": 25,
+          "size": "8-20px",
+          "colors": ["#FF6B35", "#4CAF50", "#00BCD4", "#F1C40F"],
+          "speed": "2-5px/s",
+          "opacity": "0.7-1.0",
+          "movement": "organic",
+          "style": "brushStroke",
+          "texture": "rough"
+        },
+        "interaction": {
+          "count": 12,
+          "size": "6-16px",
+          "colors": ["#FF6B35", "#FF8A65"],
+          "speed": "3-6px/s",
+          "opacity": "0.8-1.0",
+          "movement": "burst",
+          "style": "organic"
+        },
+        "trail": {
+          "count": 8,
+          "size": "4-10px",
+          "colors": ["#4CAF50", "#66BB6A"],
+          "speed": "follow",
+          "opacity": "0.9-0.3",
+          "movement": "trail",
+          "fadeOut": "800ms",
+          "style": "brushStroke"
+        },
+        "celebration": {
+          "count": 40,
+          "size": "6-18px",
+          "colors": ["#FF6B35", "#4CAF50", "#00BCD4", "#F1C40F", "#E74C3C"],
+          "speed": "4-12px/s",
+          "opacity": "1.0-0.0",
+          "movement": "explosion",
+          "duration": "2500ms",
+          "style": "mixed"
+        }
+      },
+      "physics": {
+        "gravity": 0.05,
+        "friction": 0.95,
+        "bounce": 0.8,
+        "wind": 0.01,
+        "organic": true
+      }
+    },
+    "artistic": {
+      "brushStrokes": {
+        "textures": ["rough", "smooth", "textured"],
+        "angles": ["-5deg", "-2deg", "0deg", "2deg", "5deg"],
+        "opacity": "0.7-0.9",
+        "blendModes": ["multiply", "overlay", "normal"]
+      },
+      "paperTexture": {
+        "background": "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnM+CjxwYXR0ZXJuIGlkPSJwYXBlciIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjRjVGMUU4Ii8+CjxsaW5lIHgxPSIwIiB5MT0iMTAiIHgyPSIyMCIgeTI9IjEwIiBzdHJva2U9IiNCREMzQzciIHN0cm9rZS13aWR0aD0iMC41Ii8+CjwvcGF0dGVybj4KPC9kZWZzPgo8cmVjdCB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIGZpbGw9InVybCgjcGFwZXIpIi8+Cjwvc3ZnPgo=')",
+        "opacity": 0.3
+      },
+      "handDrawn": {
+        "roughness": 0.8,
+        "bowing": 0.2,
+        "strokeWidth": "2-4px",
+        "fillStyle": "hachure"
+      }
+    },
+    "responsive": {
+      "breakpoints": {
+        "sm": "640px",
+        "md": "768px",
+        "lg": "1024px",
+        "xl": "1280px",
+        "2xl": "1536px"
+      },
+      "mobile": {
+        "touchTargets": "44px minimum",
+        "spacing": "reduced by 25%",
+        "fontSize": "increased by 10%",
+        "particles": "reduced count for performance"
+      }
+    },
+    "performance": {
+      "particles": {
+        "maxCount": {
+          "desktop": 100,
+          "tablet": 60,
+          "mobile": 30
+        },
+        "quality": {
+          "high": "full effects",
+          "medium": "reduced particles",
+          "low": "minimal effects"
+        }
+      },
+      "animations": {
+        "reducedMotion": "respect user preferences",
+        "fallbacks": "CSS transitions for unsupported features"
+      }
+    }
+  }
+}

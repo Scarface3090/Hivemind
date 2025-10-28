@@ -7,6 +7,8 @@ import HostView from './views/HostView/HostView.js';
 import GuessingView from './views/GuessingView/GuessingView.js';
 import ResultsView from './views/ResultsView/ResultsView.js';
 import { AppProvider } from './providers/AppProvider.js';
+import { GameContextDebugger } from './components/GameContextDebugger.js';
+import { GameContextLayout } from './components/GameContextLayout.js';
 
 const RouteErrorBoundary = (): JSX.Element => {
   const error = useRouteError();
@@ -43,32 +45,38 @@ const RouteErrorBoundary = (): JSX.Element => {
 const router = createHashRouter([
   {
     path: '/',
-    element: <AppLayout />,
+    element: <GameContextLayout />,
     errorElement: <RouteErrorBoundary />,
     children: [
       {
-        index: true,
-        element: <HomeScreen />,
-      },
-      {
-        path: 'feed',
-        element: <GameFeed />,
-      },
-      {
-        path: 'host',
-        element: <HostView />,
-      },
-      {
-        path: 'game/:gameId',
-        element: <GuessingView />,
-      },
-      {
-        path: 'results/:gameId',
-        element: <ResultsView />,
-      },
-      {
-        path: '*',
-        element: <Navigate to="/" replace />,
+        path: '/',
+        element: <AppLayout />,
+        children: [
+          {
+            index: true,
+            element: <HomeScreen />,
+          },
+          {
+            path: 'feed',
+            element: <GameFeed />,
+          },
+          {
+            path: 'host',
+            element: <HostView />,
+          },
+          {
+            path: 'game/:gameId',
+            element: <GuessingView />,
+          },
+          {
+            path: 'results/:gameId',
+            element: <ResultsView />,
+          },
+          {
+            path: '*',
+            element: <Navigate to="/" replace />,
+          },
+        ],
       },
     ],
   },
@@ -95,11 +103,13 @@ const App = (): JSX.Element => {
 
   return (
     <AppProvider>
-      <RouterProvider
-        router={router}
-        future={{ v7_startTransition: true }}
-        fallbackElement={<div>Loading...</div>}
-      />
+      <GameContextDebugger>
+        <RouterProvider
+          router={router}
+          future={{ v7_startTransition: true }}
+          fallbackElement={<div>Loading...</div>}
+        />
+      </GameContextDebugger>
     </AppProvider>
   );
 };

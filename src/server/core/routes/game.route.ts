@@ -16,7 +16,7 @@ import { guessRequestSchema, guessResponseSchema, gamePollingResponseSchema, gam
 import { getGameById } from '../services/game.lifecycle.js';
 import { getMedianSnapshotCached } from '../services/median.service.js';
 import { getGameResults } from '../services/scoring.service.js';
-import { getAvailableContexts, getContextsWithCounts, getFilteredSpectrum } from '../services/content.service.js';
+import { getContextsWithCounts } from '../services/content.service.js';
 import { contextsResponseSchema } from '../../../shared/schemas.js';
 
 const router = express.Router();
@@ -150,7 +150,7 @@ router.get('/api/games/:gameId/results', async (req, res) => {
     }
     // Attach viewer context
     const { userId } = getEffectiveUser();
-    let viewer: { isHost: boolean; score?: number; rank?: number } | undefined;
+    let viewer: { isHost: boolean; guessValue?: number; score?: any } | undefined;
     if (userId) {
       const isHost = results.hostUserId === userId;
       if (isHost) {
@@ -161,11 +161,16 @@ router.get('/api/games/:gameId/results', async (req, res) => {
       } else {
         const player = results.scoreSummary.players.find((p) => p.userId === userId);
         const guess = results.guesses.find((g) => g.userId === userId);
-        viewer = {
+        const viewerData: { isHost: boolean; guessValue?: number; score?: any } = {
           isHost: false,
-          guessValue: guess?.value,
-          score: player,
         };
+        if (guess?.value !== undefined) {
+          viewerData.guessValue = guess.value;
+        }
+        if (player) {
+          viewerData.score = player;
+        }
+        viewer = viewerData;
       }
     }
 

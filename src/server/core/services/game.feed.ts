@@ -4,6 +4,7 @@ import type { GameMetadata } from '../../../shared/types/Game.js';
 import { DEFAULT_PAGINATION_LIMIT } from '../../../shared/constants.js';
 import { redisKeys } from '../redis/keys.js';
 import { getGameById } from './game.lifecycle.js';
+import { gameMetadataSchema } from '../../../shared/schemas.js';
 
 interface FeedOptions {
   cursor?: string;
@@ -30,9 +31,17 @@ export const getActiveGamesFeed = async ({
 
   const games: GameMetadata[] = [];
   for (const entry of members) {
-    const metadata = await getGameById(entry.member);
-    if (metadata && metadata.state === GamePhase.Active) {
-      games.push(metadata);
+    try {
+      const metadata = await getGameById(entry.member);
+      if (metadata && metadata.state === GamePhase.Active) {
+        // Validate the game metadata matches current schema
+        const validatedMetadata = gameMetadataSchema.parse(metadata);
+        games.push(validatedMetadata);
+      }
+    } catch (error) {
+      console.warn(`Skipping invalid game ${entry.member} in active feed:`, error instanceof Error ? error.message : error);
+      // Skip invalid games rather than failing the entire feed
+      continue;
     }
   }
 

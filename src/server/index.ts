@@ -2,7 +2,7 @@ import express from 'express';
 import type { InitResponse, IncrementResponse, DecrementResponse } from '../shared/api.js';
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
-import { contentRefreshRouter, gameRouter, devRouter } from './core/routes/index.js';
+import { contentRefreshRouter, gameRouter, contextRouter, devRouter } from './core/routes/index.js';
 import { bootstrapServer } from './main.js';
 
 const app = express();
@@ -135,6 +135,7 @@ router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
 app.use(router);
 app.use(contentRefreshRouter);
 app.use(gameRouter);
+app.use(contextRouter);
 // Always mount dev tools; runtime guard inside the router controls access
 app.use('/api/dev', devRouter);
 // TODO: Mount resultsRouter when results APIs are implemented

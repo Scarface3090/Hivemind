@@ -39,13 +39,16 @@ export interface EnrichedDraftRecord extends Omit<DraftRecord, 'spectrumId'> {
   spectrum: Spectrum;
 }
 
-const pickRandomSpectrumId = async (context?: string, difficulty?: SpectrumDifficulty): Promise<string> => {
+const pickRandomSpectrumId = async (
+  context?: string,
+  difficulty?: SpectrumDifficulty
+): Promise<string> => {
   if (context || difficulty) {
     // Use filtered selection
     const spectrum = await getFilteredSpectrum(context, difficulty);
     return spectrum.id;
   }
-  
+
   // Fallback to random selection from all spectra
   const spectra = await ensureSpectrumCache();
   if (!spectra.length) {
@@ -63,7 +66,10 @@ const pickRandomSpectrumId = async (context?: string, difficulty?: SpectrumDiffi
 const randomTargetValue = (): number =>
   Math.floor(Math.random() * (MAX_GUESS_VALUE - MIN_GUESS_VALUE + 1)) + MIN_GUESS_VALUE;
 
-const buildDraft = async (hostUserId: string, options?: { context?: string; difficulty?: SpectrumDifficulty }): Promise<DraftRecord> => {
+const buildDraft = async (
+  hostUserId: string,
+  options?: { context?: string; difficulty?: SpectrumDifficulty }
+): Promise<DraftRecord> => {
   const draftId = randomUUID();
   const now = Date.now();
   const createdAt = new Date(now).toISOString();
@@ -81,7 +87,10 @@ const buildDraft = async (hostUserId: string, options?: { context?: string; diff
   };
 };
 
-export const createDraft = async (hostUserId: string, options?: { context?: string; difficulty?: SpectrumDifficulty }): Promise<EnrichedDraftRecord> => {
+export const createDraft = async (
+  hostUserId: string,
+  options?: { context?: string; difficulty?: SpectrumDifficulty }
+): Promise<EnrichedDraftRecord> => {
   const draft = await buildDraft(hostUserId, options);
   await saveDraft(draft, DRAFT_TTL_SECONDS);
 
@@ -132,12 +141,26 @@ const requireDraft = async (draftId: string): Promise<DraftRecord> => {
   };
 };
 
-const hydrateMetadata = async (gameId: string, record: Record<string, string>): Promise<GameMetadata> => {
+const hydrateMetadata = async (
+  gameId: string,
+  record: Record<string, string>
+): Promise<GameMetadata> => {
   const spectra = await ensureSpectrumCache();
-  const spectrum = spectra.find((entry) => entry.id === record.spectrumId);
+  let spectrum = spectra.find((entry) => entry.id === record.spectrumId);
+
   if (!spectrum) {
-    throw new Error('Stored spectrum is no longer available.');
+    console.warn(
+      `Game ${gameId}: Spectrum ID ${record.spectrumId} not found in current data, using fallback spectrum`
+    );
+    // Use the first available spectrum as fallback for old games
+    spectrum = spectra[0];
+    if (!spectrum) {
+      throw new Error('No spectra available in cache');
+    }
   }
+
+  // Spectrum data from ensureSpectrumCache() is already validated
+  // No additional validation needed since the cache contains valid Spectrum objects
 
   let parsedTiming: GameTiming | undefined;
   if (record.timing) {
@@ -175,7 +198,8 @@ const hydrateMetadata = async (gameId: string, record: Record<string, string>): 
     throw new Error('Game metadata missing required fields.');
   }
 
-  const medianGuessValue = medianGuess === 'null' || medianGuess === undefined ? null : Number(medianGuess);
+  const medianGuessValue =
+    medianGuess === 'null' || medianGuess === undefined ? null : Number(medianGuess);
 
   let parsedRedditPost: GameMetadata['redditPost'];
   if (redditPost) {
@@ -255,7 +279,11 @@ export const publishGame = async (
 
   try {
     const redditPost = await createGamePost({ metadata });
-    metadata.redditPost = redditPost;
+    metadata.redditPost = {
+      postId: redditPost.postId as `t3_${string}`,
+      permalink: redditPost.permalink,
+      url: redditPost.url,
+    };
 
     await saveGameMetadata(metadata);
     await addGameToStateIndex(gameId, GamePhase.Active, end.getTime());

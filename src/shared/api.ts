@@ -103,3 +103,10 @@ export interface SimulateGuessesResponse {
   inserted: number;
   sample: number[];
 }
+
+// Game context detection
+export interface GameContextResponse {
+  gameId: string | null;
+  isDirectGameAccess: boolean;
+  postData: unknown;
+}

@@ -6,9 +6,14 @@ A social guessing game built on Reddit's Devvit platform where players try to "r
 
 **Hivemind** is an asynchronous social guessing game where:
 - **Hosts** create games with clues and secret targets on dynamic spectra (e.g., "Coffee ↔ Tea")
-- **Players** submit guesses using an interactive slider while seeing the live community median
+- **Players** click game posts and immediately start guessing using an interactive slider ✨ **NEW: Direct Game Entry**
 - **Scoring** combines guessing accuracy with social influence (comment upvotes)
 - **Results** show detailed analytics, consensus labels, and community accolades
+
+### 🚀 Direct Game Entry - Zero-Friction Gameplay ✅ FULLY ACTIVE
+Users can click on any Hivemind game post in their Reddit feed and immediately see the appropriate game interface - no navigation required! The system intelligently detects the game context and automatically routes to the guessing interface for active games or results view for completed games.
+
+**✨ NEW: Enhanced Debug Tools** - Developers can now enable visual debugging with `?debug=context` URL parameter or localStorage flag to monitor context detection in real-time.
 
 ## 🏗️ Architecture
 
@@ -34,6 +39,19 @@ Built as a monorepo with three main components:
 
 ## 🚀 Key Features Implemented
 
+### Direct Game Entry System ✅ FULLY IMPLEMENTED & ACTIVE
+- **Context Detection API** - Server endpoint `/api/context` detects when users access specific game posts ✅ ACTIVE
+- **Post Data Integration** - Leverages Devvit's `context.postData` to identify game context ✅ ACTIVE
+- **Client-Side Context Hook** - `useGameContext` hook with React Query integration and 5-minute caching ✅ ACTIVE
+- **GameContextLayout Component** - Intelligent routing component integrated at router root level ✅ ACTIVE
+- **Automatic Game Routing** - Routes active games → guessing interface, ended games → results view ✅ ACTIVE
+- **Intelligent Fallback** - Gracefully handles invalid contexts with fallback to home screen ✅ ACTIVE
+- **Graceful Error Handling** - Robust error handling prevents broken states with comprehensive retry logic ✅ ACTIVE
+- **Performance Optimized** - Single API call for context detection with intelligent caching and retry logic ✅ ACTIVE
+- **Smart Game State Routing** - Validates game state and routes to appropriate view based on game phase ✅ ACTIVE
+- **Context Validation** - Validates game IDs, handles invalid/expired contexts, and prevents navigation loops ✅ ACTIVE
+- **Debug Tools Integration** - Visual debugging overlay with real-time context monitoring ✅ NEW
+
 ### Dynamic Content System ✨ NEW
 - **Embedded CSV Content Management** - 150 curated spectra embedded directly in the application code
 - **Context Selection Interface** - Hosts can choose from 12 categories: Movies, Food, Gaming, Technology, Social Media, Life Skills, Relationships, Lifestyle, Entertainment, Internet Culture
@@ -51,6 +69,7 @@ Built as a monorepo with three main components:
 - **Timed Rounds** - Configurable durations (1-24 hours)
 - **Live Median** - Real-time community consensus updates
 - **Automated Transitions** - Background jobs handle phase changes
+- **Backward Compatibility** - Graceful handling of legacy games with missing or invalid spectrum data
 
 ### Interactive Gameplay
 - **Phaser Slider** - Touch-optimized spectrum selection
@@ -80,7 +99,8 @@ Built as a monorepo with three main components:
 
 ## 🔌 New API Endpoints ✨
 
-The Dynamic Content System introduces new API endpoints for enhanced content management:
+### Dynamic Content System
+Enhanced content management with context and difficulty filtering:
 
 ```bash
 # Context Management
@@ -109,11 +129,64 @@ POST /api/games/draft               # Enhanced draft with context/difficulty fil
 }
 ```
 
+### Direct Game Entry System ✅ FULLY ACTIVE
+Seamless game access from Reddit posts with intelligent routing:
+
+```bash
+# Game Context Detection
+GET /api/context                     # Detect game context from post data
+
+# Context Response
+{
+  "gameId": "game_123",             # Game ID if accessed from game post
+  "isDirectGameAccess": true,       # Whether user accessed via game post
+  "postData": {                     # Full post data from Devvit context
+    "gameId": "game_123",
+    "host": "username",
+    "startTime": "2024-10-24T10:00:00Z",
+    "endTime": "2024-10-24T22:00:00Z",
+    "spectrum": {
+      "leftLabel": "Coffee",
+      "rightLabel": "Tea"
+    }
+  },
+  "debugInfo": {                    # Enhanced debugging information
+    "hasPostData": true,
+    "postDataKeys": ["gameId", "host", "startTime", "endTime", "spectrum"],
+    "postId": "post_abc123",
+    "contextKeys": ["postId", "userId", "subredditName", "postData"]
+  }
+}
+```
+
+**Implementation Status:**
+- **useGameContext Hook** - React hook for context detection with React Query caching and intelligent retry logic ✅ ACTIVE
+- **GameContextLayout Component** - Intelligent routing component integrated at router root level ✅ ACTIVE
+- **GameContextErrorBoundary** - Simplified pass-through component with graceful error handling ✅ ACTIVE
+- **Context Detection API** - Server endpoint `/api/context` fully functional and detecting game context ✅ ACTIVE
+- **Automatic State Detection** - Routes to guessing view for active games, results view for ended games ✅ ACTIVE
+- **Graceful Degradation** - Falls back to normal home screen behavior on any errors ✅ ACTIVE
+- **Performance Optimized** - 5-minute caching, single API call, minimal loading states ✅ ACTIVE
+- **Debug Tools** - GameContextDebugger component with real-time monitoring and interactive controls ✅ ACTIVE
+
 ### API Monitoring & Debugging ✨ NEW
 - **Request/Response Logging** - All context API calls are logged with detailed request information
 - **Error Tracking** - Comprehensive error logging with stack traces and context information
 - **Performance Monitoring** - Response times and success rates tracked for context endpoints
 - **Debug Information** - Detailed logging shows context counts, filtering results, and cache performance
+
+### Developer Debug Tools ✅ FULLY ACTIVE
+- **GameContextDebugger Component** - Visual debugging overlay integrated into main App component
+- **useGameContextDebug Hook** - Enhanced debugging version of useGameContext with comprehensive logging
+- **Real-time Debug Panel** - Shows current path, game ID, direct access status, loading state, and errors
+- **Debug Mode Activation** - Enable via URL parameter `?debug=context` or localStorage flag for persistent debugging
+- **Debug Log History** - Maintains last 20 debug entries with timestamps for troubleshooting
+- **Interactive Debug Controls** - Enable/disable context queries and debug mode from the UI
+- **Enhanced Server-Side Debugging** - Comprehensive logging of Devvit context properties and postData structure
+- **Multi-Strategy Context Detection** - API attempts multiple methods to extract gameId from various context sources
+- **Detailed Debug Responses** - API includes debugInfo with context keys, postData analysis, and error details
+- **Router Independence** - Debug component works without React Router dependencies for maximum compatibility
+- **Visual Debugging Overlay** - Collapsible debug panel that doesn't interfere with normal app usage
 
 ## 📋 Development Commands
 
@@ -136,6 +209,11 @@ npm run prettier      # Format code
 
 # Testing
 npm run test          # Run Vitest test suite
+
+# Debug Tools ✨ ACTIVE
+# Enable context debugging via URL parameter: ?debug=context
+# Or via browser console: localStorage.setItem('gameContextDebug', 'true')
+# Visual debugging overlay shows real-time context detection status
 
 # Authentication & Deployment
 npm run login         # Login to Reddit/Devvit CLI
@@ -174,12 +252,13 @@ npm run launch        # Deploy and publish for review
 ├── src/
 │   ├── client/          # React + Phaser frontend
 │   │   ├── views/       # Main screens (✨ ENHANCED: HostView with content selection)
-│   │   ├── components/  # Reusable UI components (✨ NEW: ContextSelector, DifficultySelector, ContextSelectionErrorBoundary)
+│   │   ├── components/  # Reusable UI components (✨ NEW: ContextSelector, DifficultySelector, ContextSelectionErrorBoundary, GameContextRouter, GameContextErrorBoundary, GameContextDebugger)
+│   │   ├── hooks/       # Custom React hooks (✨ NEW: useGameContext, useGameContextDebug)
 │   │   ├── game/        # Phaser scenes and systems
 │   │   └── api/         # HTTP client wrappers (✨ NEW: Context APIs)
 │   ├── server/          # Express serverless backend
 │   │   ├── core/        # Business logic and services
-│   │   │   ├── routes/  # API endpoints (✨ NEW: /api/contexts)
+│   │   │   ├── routes/  # API endpoints (✨ NEW: /api/contexts, /api/context)
 │   │   │   ├── services/# Game logic, scoring, content (✨ ENHANCED: Dynamic content system)
 │   │   │   └── redis/   # Data access layer (✨ NEW: Context indexing)
 │   │   └── middleware/  # Express middleware
@@ -195,7 +274,7 @@ npm run launch        # Deploy and publish for review
 ## 🎮 Game Flow
 
 1. **Host Flow**: Choose context & difficulty → Receive filtered spectrum + secret target → Add clue → Publish
-2. **Player Flow**: Browse active games → Join game → See median → Submit guess + justification  
+2. **Player Flow**: Click game post → Automatically routed to guessing interface → See median → Submit guess + justification  
 3. **Results**: View accuracy scores → Social influence metrics → Community consensus → Accolades
 
 ### Enhanced Host Experience ✨ NEW
@@ -306,11 +385,35 @@ Retrieved context summary from cache for 12 contexts
 [API] GET /api/contexts - Found 12 contexts: Movies (15), Food (15), Gaming (15)...
 ```
 
-#### Error Handling
+#### Debug Mode Usage ✨ ENHANCED
+```bash
+# Enable debug mode via URL parameter
+https://your-app.com/?debug=context
+
+# Or enable via browser console
+localStorage.setItem('gameContextDebug', 'true');
+window.location.reload();
+
+# Debug panel shows:
+# - Current navigation path (router-independent tracking)
+# - Game context detection results with enhanced server-side logging
+# - API call status and comprehensive error details
+# - Real-time debug log with timestamps and context analysis
+# - Interactive controls for enabling/disabling context queries
+# - Persistent debug mode across page reloads
+# - Server-side context debugging with Devvit context property inspection
+# - Multi-level gameId extraction attempts and fallback strategies
+# - Detailed debugInfo responses with context keys and postData structure
+```
+
+#### Error Handling ✨ ENHANCED
 - **CSV Loading Failures**: Automatically falls back to Google Sheets (if configured) or hardcoded spectra
 - **Validation Errors**: Logs detailed error information while continuing with valid content
 - **Cache Failures**: Server starts with in-memory fallback content to ensure availability
 - **Graceful Degradation**: Server always starts successfully, even with minimal fallback content
+- **Legacy Game Recovery**: Games with missing or invalid spectrum data automatically use fallback spectra to prevent crashes
+- **Optimized Validation**: Streamlined validation pipeline trusts pre-validated cache data, eliminating redundant checks
+- **Performance-First Fallbacks**: Simplified error recovery focuses on speed and reliability over complex validation
 
 ### Content System Configuration ✨ NEW
 - **Primary Source**: Embedded CSV data directly in `content.service.ts` - 150 curated spectra across 12 contexts
@@ -349,7 +452,89 @@ Secondary metrics:
 - Game completion rates
 - Community consensus quality
 
+## ✅ Current Status: Direct Game Entry - FULLY ACTIVE
+
+### Complete Implementation - All Systems Operational
+
+The direct game entry system is **fully implemented and operational**. Users clicking on Hivemind game posts in their Reddit feed are automatically routed to the appropriate game interface with zero friction.
+
+**✅ ACTIVE COMPONENTS:**
+- **Context Detection API** (`/api/context`) - Fully functional, detects game context from Devvit post data
+- **useGameContext Hook** - React hook with React Query caching and intelligent retry logic
+- **GameContextLayout Component** - Intelligent routing component integrated at router root level
+- **Automatic Game Routing** - Active games → guessing interface, ended games → results view
+- **Server Integration** - Context routes integrated with comprehensive error handling
+- **Error Boundaries** - Graceful error handling prevents app crashes
+- **Debug Tools** - Visual debugging overlay with real-time context monitoring
+
+**🎯 USER EXPERIENCE:**
+- **Zero-Friction Entry**: Click game post → immediately see guessing interface (active games) or results (ended games)
+- **Intelligent Routing**: System automatically detects game state and routes to appropriate view
+- **Graceful Fallbacks**: Invalid or expired games gracefully redirect to home screen
+- **Performance Optimized**: Single API call with 5-minute caching for optimal performance
+- **Debug Support**: Developers can enable visual debugging with `?debug=context` URL parameter
+
+**🔧 TECHNICAL IMPLEMENTATION:**
+- Router structure: `GameContextLayout` → `AppLayout` → individual views
+- Context detection on initial app load with smart caching
+- Comprehensive error handling with fallback to normal navigation
+- Game state validation ensures users see appropriate interface
+
 ## 🆕 Recent Updates
+
+### Latest Performance & Reliability Updates ✨ NEW
+- ✅ **Optimized Game Lifecycle**: Removed redundant spectrum validation in game metadata hydration for improved performance
+- ✅ **Streamlined Error Recovery**: Simplified fallback logic trusts pre-validated cache data, reducing processing overhead
+- ✅ **Enhanced Code Quality**: Improved code formatting and structure for better maintainability
+- ✅ **Performance-First Architecture**: Eliminated duplicate validation steps while maintaining robust error handling
+- ✅ **Trusted Cache System**: Game lifecycle service now relies on pre-validated spectrum cache for optimal performance
+
+### Latest Infrastructure & Integration Updates ✨ ENHANCED
+- ✅ **Legacy Game Compatibility**: Enhanced game lifecycle service with automatic fallback handling for games with missing or invalid spectrum data
+- ✅ **Robust Error Recovery**: Games with outdated spectrum references now automatically use fallback spectra instead of crashing
+- ✅ **Streamlined Validation**: Removed redundant spectrum validation since cache already contains validated data, improving performance
+- ✅ **Optimized Error Handling**: Simplified validation pipeline with trusted cache data and comprehensive fallback logging
+- ✅ **Backward Compatibility Logging**: Comprehensive logging for legacy game recovery with detailed error tracking and fallback usage
+- ✅ **Performance Optimization**: Eliminated duplicate validation steps by trusting pre-validated cache data
+
+### Previous Infrastructure & Integration Updates
+- ✅ **GameContextLayout Integration**: Successfully integrated GameContextLayout at router root level for optimal context detection
+- ✅ **Router Structure Optimization**: Fixed router hierarchy with GameContextLayout → AppLayout → views for proper context flow
+- ✅ **Component Export Fixes**: Resolved ActiveGameCard export issues and eliminated duplicate imports
+- ✅ **GameContextDebugger Integration**: Integrated visual debugging overlay into main App component with GameContextDebugger wrapper
+- ✅ **Hook Dependencies Optimization**: Fixed React useEffect dependencies to prevent unnecessary re-renders and ensure proper state management
+- ✅ **Simplified Error Handling**: Streamlined error handling with graceful fallbacks throughout the context detection pipeline
+- ✅ **Debug Component Optimization**: Removed React Router dependencies from GameContextDebugger for improved compatibility
+
+### Developer Debug Tools (Latest) ✅ FULLY OPERATIONAL
+- ✅ **GameContextDebugger Component**: Visual debugging overlay integrated into main App component for real-time context monitoring
+- ✅ **useGameContextDebug Hook**: Enhanced debugging version of useGameContext with comprehensive logging and error tracking
+- ✅ **Debug Mode Activation**: Enable via URL parameter `?debug=context` or localStorage flag for persistent debugging
+- ✅ **Real-time Debug Panel**: Shows current path, game ID, direct access status, loading state, and detailed error information
+- ✅ **Debug Log History**: Maintains timestamped log entries for troubleshooting context detection issues
+- ✅ **Interactive Debug Controls**: Toggle context queries and debug mode directly from the UI
+- ✅ **Enhanced Context API Debugging**: Comprehensive server-side logging of Devvit context properties, postData structure, and access patterns
+- ✅ **Multi-Level Context Detection**: API attempts multiple strategies to extract gameId from postData, context.postId, and fallback methods
+- ✅ **Detailed Debug Information**: API responses include debugInfo object with context keys, postData structure, and comprehensive error details
+- ✅ **Robust Error Handling**: Context API gracefully handles access errors with detailed logging and safe fallback responses
+- ✅ **TypeScript Integration**: Proper typing for debug information with queryKey string array compatibility
+- ✅ **Router Independence**: Debug component works without React Router dependencies for maximum compatibility
+- ✅ **App Integration**: GameContextDebugger properly integrated as wrapper component in main App
+- ✅ **Visual Debugging Overlay**: Non-intrusive debug panel that can be toggled on/off as needed
+
+### Direct Game Entry System (Latest) ✅ FULLY IMPLEMENTED & OPERATIONAL
+- ✅ **Context Detection API**: `/api/context` endpoint detects game context from Devvit post data - ACTIVE
+- ✅ **Server Integration**: Context router integrated into main server with comprehensive error handling - ACTIVE
+- ✅ **Post Data Access**: Leverages `context.postData` from Devvit server context for game identification - ACTIVE
+- ✅ **Client-Side Context Hook**: `useGameContext` hook with React Query integration and 5-minute caching - ACTIVE
+- ✅ **GameContextLayout Component**: Intelligent routing component integrated at router root level - ACTIVE
+- ✅ **Automatic Game Routing**: Routes active games → guessing interface, ended games → results view - ACTIVE
+- ✅ **Smart State Detection**: Automatically detects game phase and routes to appropriate view - ACTIVE
+- ✅ **Graceful Fallback**: Falls back to normal home screen behavior when context detection fails - ACTIVE
+- ✅ **Performance Optimized**: Single API call with intelligent caching and retry logic - ACTIVE
+- ✅ **React Hook Optimization**: Optimized useEffect dependencies for proper state management - ACTIVE
+- ✅ **Router Integration**: GameContextLayout properly integrated at root level for seamless context detection - ACTIVE
+- ✅ **Debug Tools**: GameContextDebugger component with real-time monitoring and interactive controls - ACTIVE
 
 ### Dynamic Content System (Latest)
 - ✅ **Embedded Content Management**: 150 curated spectra embedded directly in application code
@@ -363,17 +548,21 @@ Secondary metrics:
 - ✅ **Serverless Optimization**: No file system dependencies, optimized for Devvit runtime
 - ✅ **Error Boundary Protection**: ContextSelectionErrorBoundary component prevents content loading failures from breaking the host experience
 
-### Server Infrastructure Enhancements ✨ NEW
+### Server Infrastructure Enhancements ✨ ENHANCED
 - ✅ **Bootstrap Server Process**: Comprehensive server initialization with content validation
 - ✅ **Startup Content Loading**: CSV parsing and cache population during server startup
 - ✅ **Content Statistics Logging**: Detailed breakdown of contexts and difficulty distribution
 - ✅ **Graceful Error Handling**: Server starts with fallback content if initialization fails
-- ✅ **Validation Pipeline**: Multi-stage content validation with detailed error reporting
+- ✅ **Optimized Validation Pipeline**: Streamlined content validation with trusted cache data
+- ✅ **Enhanced Legacy Game Support**: Automatic fallback handling for games with missing or invalid spectrum data
+- ✅ **Performance-Optimized Recovery**: Simplified validation reduces overhead while maintaining reliability or invalid spectrum data
 
 ### API Enhancements
-- ✅ **New Endpoint**: `GET /api/contexts` - Returns available contexts with counts
+- ✅ **New Context Endpoint**: `GET /api/context` - Detects game context from Devvit post data for direct game entry
+- ✅ **Content Management**: `GET /api/contexts` - Returns available contexts with counts
 - ✅ **Enhanced Draft API**: Accepts optional context and difficulty filters
 - ✅ **Backward Compatibility**: Existing random selection still works
 - ✅ **Improved Error Handling**: Detailed logging and graceful degradation
 - ✅ **Enhanced API Monitoring**: Comprehensive request/response logging with performance tracking
 - ✅ **Debug-Friendly Logging**: Detailed context information and error traces for easier troubleshooting
+- ✅ **Type-Safe Reddit Post Integration**: Enhanced `redditPost` metadata structure with proper TypeScript typing for `postId`, `permalink`, and `url` fields
