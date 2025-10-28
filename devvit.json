@@ -14,12 +14,6 @@
     "dir": "dist/server",
     "entry": "index.cjs"
   },
-  "reddit": {
-    "api": true,
-    "asUser": [
-      "SUBMIT_COMMENT"
-    ]
-  },
   "permissions": {
     "reddit": {
       "enable": true,
