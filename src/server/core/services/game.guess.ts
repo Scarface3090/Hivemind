@@ -17,14 +17,14 @@ import {
 const getEffectiveUser = (): { userId?: string; username?: string } => {
   const ctx = context as { userId?: string; username?: string };
   const isProd = process.env.NODE_ENV === 'production';
-  
-  console.log(`[DEBUG] getEffectiveUser - context:`, { 
-    userId: ctx.userId, 
-    username: ctx.username, 
+
+  console.log(`[DEBUG] getEffectiveUser - context:`, {
+    userId: ctx.userId,
+    username: ctx.username,
     isProd,
-    nodeEnv: process.env.NODE_ENV 
+    nodeEnv: process.env.NODE_ENV,
   });
-  
+
   if (ctx.userId && ctx.username) return ctx;
   if (!isProd) {
     return {
@@ -35,16 +35,22 @@ const getEffectiveUser = (): { userId?: string; username?: string } => {
   return ctx;
 };
 
-export const submitGuess = async (gameId: string, request: GuessRequest): Promise<GuessResponse> => {
+export const submitGuess = async (
+  gameId: string,
+  request: GuessRequest
+): Promise<GuessResponse> => {
   const { userId, username } = getEffectiveUser();
   if (!userId || !username) {
     throw new Error('User context missing');
   }
 
   // Validate request body (normalize blank justification to undefined)
-  const normalizedJustification = typeof request.justification === 'string'
-    ? (request.justification.trim().length > 0 ? request.justification.trim() : undefined)
-    : undefined;
+  const normalizedJustification =
+    typeof request.justification === 'string'
+      ? request.justification.trim().length > 0
+        ? request.justification.trim()
+        : undefined
+      : undefined;
   const parsed = guessRequestSchema.parse({ ...request, justification: normalizedJustification });
 
   // Ensure game exists and is ACTIVE
@@ -75,11 +81,18 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
       value: Number(existing.value ?? '0'),
       createdAt: existing.createdAt ?? timestampNow(),
       source: (existing.source as GuessSource) ?? GuessSource.Unknown,
-      ...(existing.justification && existing.justification.trim().length > 0 ? { justification: existing.justification } : {}),
-      ...(existing.redditCommentId ? { redditCommentId: existing.redditCommentId as `t1_${string}` | `t3_${string}` } : {}),
+      ...(existing.justification && existing.justification.trim().length > 0
+        ? { justification: existing.justification }
+        : {}),
+      ...(existing.redditCommentId
+        ? { redditCommentId: existing.redditCommentId as `t1_${string}` | `t3_${string}` }
+        : {}),
     };
 
-    const response = guessResponseSchema.parse({ guess: already, median: snapshot }) as GuessResponse;
+    const response = guessResponseSchema.parse({
+      guess: already,
+      median: snapshot,
+    }) as GuessResponse;
     return response;
   }
 
@@ -91,7 +104,9 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
     value: parsed.value,
     createdAt: timestampNow(),
     source: GuessSource.InApp,
-    ...(parsed.justification && parsed.justification.trim().length > 0 ? { justification: parsed.justification } : {}),
+    ...(parsed.justification && parsed.justification.trim().length > 0
+      ? { justification: parsed.justification }
+      : {}),
   };
 
   // First, persist the guess and compute median
@@ -102,36 +117,40 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
   // Now post comment to Reddit if game has a post (only after successful persistence)
   console.log(`[DEBUG] Game metadata redditPost:`, JSON.stringify(metadata.redditPost));
   console.log(`[DEBUG] Current user context:`, { userId, username });
-  
+
   if (metadata.redditPost?.postId) {
     try {
-      const commentText = parsed.justification 
+      const commentText = parsed.justification
         ? `${username} guessed: ${parsed.value}\n\n${parsed.justification}`
         : `${username} guessed: ${parsed.value}`;
-      
-      console.log(`[DEBUG] Posting comment to Reddit post ${metadata.redditPost.postId} with text:`, commentText);
+
+      console.log(
+        `[DEBUG] Posting comment to Reddit post ${metadata.redditPost.postId} with text:`,
+        commentText
+      );
       console.log(`[DEBUG] Comment API call parameters:`, {
         id: metadata.redditPost.postId,
         text: commentText,
-        runAs: 'USER'
+        runAs: 'USER',
       });
-      
+
       // Post comment (try as USER first, fallback to APP)
       let comment;
       try {
         comment = await reddit.submitComment({
           id: metadata.redditPost.postId,
           text: commentText,
-          runAs: 'USER'
+          runAs: 'USER',
         });
         console.log(`[DEBUG] Successfully posted comment as USER with ID:`, comment.id);
       } catch (userError) {
-        console.warn(`[WARN] Failed to post as USER (${userError.message}), trying as APP`);
+        const errorMessage = userError instanceof Error ? userError.message : String(userError);
+        console.warn(`[WARN] Failed to post as USER (${errorMessage}), trying as APP`);
         try {
           comment = await reddit.submitComment({
             id: metadata.redditPost.postId,
             text: commentText,
-            runAs: 'APP'
+            runAs: 'APP',
           });
           console.log(`[DEBUG] Successfully posted comment as APP with ID:`, comment.id);
         } catch (appError) {
@@ -139,7 +158,7 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
           throw appError; // Re-throw to be caught by outer try-catch
         }
       }
-      
+
       // Update the saved guess record with the Reddit comment ID
       const commentId = comment.id as `t1_${string}` | `t3_${string}`;
       guess.redditCommentId = commentId;
@@ -164,5 +183,3 @@ export const submitGuess = async (gameId: string, request: GuessRequest): Promis
 
   return guessResponseSchema.parse({ guess, median: snapshot }) as GuessResponse;
 };
-
-

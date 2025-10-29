@@ -101,7 +101,7 @@ Built as a monorepo with three main components:
 ## 🔌 New API Endpoints ✨
 
 ### Social Integration System ✨ **NEW**
-Enhanced guess submission with automatic Reddit comment integration:
+Enhanced guess submission with automatic Reddit comment integration and robust error handling:
 
 ```bash
 # Guess Submission with Reddit Integration
@@ -126,6 +126,13 @@ POST /api/games/:gameId/guesses     # Submit guess with automatic Reddit comment
     "sampleSize": 12
   }
 }
+
+# Enhanced Error Handling Features:
+# - Type-safe error message extraction for both Error objects and string errors
+# - Dual-mode comment posting: USER mode with APP mode fallback
+# - Comprehensive error logging with detailed context information
+# - Guess persistence guaranteed even if comment posting fails
+# - Detailed debug logging for troubleshooting comment integration issues
 ```
 
 ### Dynamic Content System
@@ -517,8 +524,10 @@ The direct game entry system is **fully implemented and operational**. Users cli
 - ✅ **Enhanced Guess Submission**: Guess service now handles Reddit comment posting with proper error handling and fallback behavior
 - ✅ **Comment ID Tracking**: Each guess now tracks its associated Reddit comment ID for future social scoring integration
 - ✅ **Robust Comment Posting**: Comment posting failures don't prevent guess submission - the guess is always persisted first
-- ✅ **Debug Logging**: Comprehensive logging for Reddit comment integration with detailed error tracking
+- ✅ **Enhanced Error Handling**: Improved error message extraction with type-safe error handling for both USER and APP comment posting modes
+- ✅ **Debug Logging**: Comprehensive logging for Reddit comment integration with detailed error tracking and fallback behavior
 - ✅ **User Context Integration**: Proper user authentication and context handling for Reddit API calls
+- ✅ **Dual-Mode Comment Posting**: Attempts USER mode first, gracefully falls back to APP mode with detailed error logging
 
 ### Latest Performance & Reliability Updates ✨ NEW
 - ✅ **Optimized Game Lifecycle**: Removed redundant spectrum validation in game metadata hydration for improved performance
