@@ -18,37 +18,48 @@ export function ActiveGameCard({ game }: { game: GameMetadata }): JSX.Element {
 
   return (
     <article className="feed-item">
-      <div className="feed-item__top">
-        <span
-          className="chip chip--participants"
-          role="status"
-          aria-live="polite"
-          title={`${game.totalParticipants} unique ${game.totalParticipants === 1 ? 'player has' : 'players have'} submitted guesses`}
-        >
-          👥 {game.totalParticipants}
-        </span>
-        <span
-          className={`chip chip--timer ${urgent ? 'chip--urgent' : ''}`}
-          role="status"
-          aria-live="polite"
-          title="Time remaining"
-        >
-          ⏱ {formatted}
-        </span>
+      {/* Header with host info and status indicators */}
+      <div className="feed-item__header">
+        <div className="feed-item__host-info">
+          <p className="feed-item__host">Hosted by</p>
+          <h4 className="feed-item__host-name">{game.hostUsername}</h4>
+        </div>
+        <div className="feed-item__status">
+          <span
+            className="chip chip--participants"
+            role="status"
+            aria-live="polite"
+            title={`${game.totalParticipants} unique ${game.totalParticipants === 1 ? 'player has' : 'players have'} submitted guesses`}
+          >
+            👥 {game.totalParticipants}
+          </span>
+          <span
+            className={`chip chip--timer ${urgent ? 'chip--urgent' : ''}`}
+            role="status"
+            aria-live="polite"
+            title="Time remaining"
+          >
+            ⏱ {formatted}
+          </span>
+        </div>
       </div>
 
-      <div className="feed-item__meta">
-        <p className="feed-item__host">Hosted by {game.hostUsername}</p>
-        <h3 className="feed-item__title feed-item__title--center">{game.clue}</h3>
+      {/* Main content area */}
+      <div className="feed-item__content">
+        <h3 className="feed-item__title">{game.clue}</h3>
+        <SpectrumPill spectrum={game.spectrum} variant="full" className="feed-item__spectrum" />
       </div>
 
-      <SpectrumPill spectrum={game.spectrum} variant="full" className="feed-item__spectrum" />
-
-      <div className="feed-item__cta">
+      {/* Action area */}
+      <div className="feed-item__actions">
         {game.state === 'REVEAL' ? (
-          <Link className="pill-button" to={`/results/${game.gameId}`}>View Results</Link>
+          <Link className="pill-button pill-button--primary" to={`/results/${game.gameId}`}>
+            View Results
+          </Link>
         ) : (
-          <Link className="pill-button" to={`/game/${game.gameId}`}>Join game</Link>
+          <Link className="pill-button pill-button--primary" to={`/game/${game.gameId}`}>
+            Join Game
+          </Link>
         )}
       </div>
 
