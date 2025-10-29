@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { ParticleSystemManager } from '../systems/ParticleSystemManager.js';
+import { colors } from '../../../shared/design-tokens.js';
 
 export type HistogramBucket = { rangeStart: number; rangeEnd: number; count: number };
 
@@ -20,6 +22,7 @@ export class HistogramScene extends Phaser.Scene {
 
   private gfx!: Phaser.GameObjects.Graphics;
   private labelLayer!: Phaser.GameObjects.Layer;
+  private particleManager!: ParticleSystemManager;
 
   constructor() {
     super('HistogramScene');
@@ -36,9 +39,15 @@ export class HistogramScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0b141c');
     this.gfx = this.add.graphics();
     this.labelLayer = this.add.layer();
+    this.particleManager = new ParticleSystemManager(this);
 
     this.scale.on('resize', () => this.draw());
     this.draw();
+    
+    // Create celebration particles after a short delay
+    this.time.delayedCall(500, () => {
+      this.createCelebrationParticles();
+    });
   }
 
   public updateData(config: Partial<HistogramSceneConfig>): void {
@@ -51,8 +60,8 @@ export class HistogramScene extends Phaser.Scene {
 
   private domain(): { start: number; end: number } {
     if (this.buckets.length === 0) return { start: 0, end: 100 };
-    const start = this.buckets[0].rangeStart;
-    const end = this.buckets[this.buckets.length - 1].rangeEnd;
+    const start = this.buckets[0]?.rangeStart ?? 0;
+    const end = this.buckets[this.buckets.length - 1]?.rangeEnd ?? 100;
     return { start, end };
   }
 
@@ -139,5 +148,44 @@ export class HistogramScene extends Phaser.Scene {
     this.gfx.fillStyle(color, 1);
     this.gfx.fillCircle(x, top - 5, 5);
     this.gfx.fillRect(x - 1.5, top, 3, bottom - top);
+  }
+  
+  private createCelebrationParticles(): void {
+    const { width, height } = this.scale;
+    
+    // Create multiple celebration bursts across the histogram
+    const celebrationPoints = [
+      { x: width * 0.2, y: height * 0.3 },
+      { x: width * 0.5, y: height * 0.2 },
+      { x: width * 0.8, y: height * 0.4 }
+    ];
+    
+    celebrationPoints.forEach((point, index) => {
+      this.time.delayedCall(index * 200, () => {
+        this.particleManager.createOrganicBurst(
+          point.x,
+          point.y,
+          {
+            colors: [
+              colors.particles.primary,
+              colors.particles.secondary,
+              colors.particles.tertiary,
+              colors.particles.burst
+            ],
+            count: 30,
+            duration: 1500,
+            size: { min: 6, max: 18 },
+            speed: { min: 60, max: 120 }
+          }
+        );
+      });
+    });
+  }
+  
+  destroy(): void {
+    if (this.particleManager) {
+      this.particleManager.destroy();
+    }
+    super.destroy();
   }
 }

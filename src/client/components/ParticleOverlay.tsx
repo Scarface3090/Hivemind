@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { colors } from '../../shared/design-tokens.js';
+import { colors, particles, performance } from '../../shared/design-tokens.js';
 
 interface ParticleOverlayProps {
   particleCount?: number;
   colors?: string[];
   className?: string;
+  effectType?: 'ambient' | 'brushStroke' | 'interaction';
+  performance?: 'high' | 'medium' | 'low';
 }
 
 interface Particle {
@@ -23,19 +25,34 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
   particleCount = 8,
   colors: providedColors,
   className = '',
+  effectType = 'ambient',
+  performance: performanceLevel = 'high',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
-  const particleColors = useMemo(
-    () =>
-      providedColors ?? [
-        colors.particles.primary,
-        colors.particles.secondary,
-        colors.particles.tertiary,
-      ],
-    [providedColors]
-  );
+  const particleColors = useMemo(() => {
+    if (providedColors) return providedColors;
+    
+    const systems = particles.systems as any;
+    switch (effectType) {
+      case 'brushStroke':
+        return systems.brushStroke?.colors || [colors.particles.primary];
+      case 'interaction':
+        return systems.interaction?.colors || [colors.particles.secondary];
+      case 'ambient':
+      default:
+        return systems.ambient?.colors || [colors.particles.tertiary];
+    }
+  }, [providedColors, effectType]);
+  
+  const adjustedParticleCount = useMemo(() => {
+    const maxCounts = performance.particles.maxCount;
+    const deviceMax = performanceLevel === 'high' ? maxCounts.desktop : 
+                     performanceLevel === 'medium' ? maxCounts.tablet : maxCounts.mobile;
+    
+    return Math.min(particleCount, Math.floor(deviceMax * 0.2)); // Use 20% of max for overlay
+  }, [particleCount, performanceLevel]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,22 +70,38 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       canvas.style.height = rect.height + 'px';
     };
 
-    const createParticle = (): Particle => ({
-      x: Math.random() * canvas.offsetWidth,
-      y: Math.random() * canvas.offsetHeight,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5,
-      size: Math.random() * 3 + 1,
-      color:
-        particleColors[Math.floor(Math.random() * particleColors.length)] ||
-        colors.particles.primary,
-      opacity: 0.8,
-      life: 0,
-      maxLife: Math.random() * 200 + 100,
-    });
+    const createParticle = (): Particle => {
+      const systemConfig = (particles.systems as any)[effectType] || particles.systems.ambient;
+      
+      // Parse size range from string format like "4-12px"
+      const sizeStr = systemConfig.size || '4-12px';
+      const sizeMatch = sizeStr.toString().match(/(\d+)-(\d+)/);
+      const sizeRange = sizeMatch 
+        ? { min: parseInt(sizeMatch[1]), max: parseInt(sizeMatch[2]) }
+        : { min: 4, max: 12 };
+      
+      // Parse speed range from string format like "0.3-1.0px/s"
+      const speedStr = systemConfig.speed || '0.3-1.0px/s';
+      const speedMatch = speedStr.toString().match(/([\d.]+)-([\d.]+)/);
+      const speedRange = speedMatch
+        ? { min: parseFloat(speedMatch[1]), max: parseFloat(speedMatch[2]) }
+        : { min: 0.3, max: 1.0 };
+      
+      return {
+        x: Math.random() * canvas.offsetWidth,
+        y: Math.random() * canvas.offsetHeight,
+        vx: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
+        vy: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
+        size: Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min,
+        color: particleColors[Math.floor(Math.random() * particleColors.length)] || colors.particles.primary,
+        opacity: effectType === 'ambient' ? 0.6 : 0.8,
+        life: 0,
+        maxLife: Math.random() * 300 + 150,
+      };
+    };
 
     const initParticles = () => {
-      particlesRef.current = Array.from({ length: particleCount }, createParticle);
+      particlesRef.current = Array.from({ length: adjustedParticleCount }, createParticle);
     };
 
     const updateParticles = () => {
@@ -100,9 +133,19 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         ctx.save();
         ctx.globalAlpha = particle.opacity;
         ctx.fillStyle = particle.color;
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fill();
+        
+        if (effectType === 'brushStroke') {
+          // Draw organic brush stroke shape
+          ctx.beginPath();
+          ctx.ellipse(particle.x, particle.y, particle.size, particle.size * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Draw circular particle
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
         ctx.restore();
       });
     };
@@ -125,7 +168,7 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       }
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [particleCount, particleColors]);
+  }, [adjustedParticleCount, particleColors, effectType]);
 
   return (
     <canvas

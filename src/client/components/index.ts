@@ -13,3 +13,5 @@ export { GameContextRouter } from './GameContextRouter.js';
 export { GameContextErrorBoundary } from './GameContextErrorBoundary.js';
 export { GameContextDebugger } from './GameContextDebugger.js';
 export { GameContextLayout } from './GameContextLayout.js';
+export { ParticleOverlay } from './ParticleOverlay.js';
+export { BrushStrokeButton } from './BrushStrokeButton.js';

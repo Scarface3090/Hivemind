@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
 import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
+import { ParticleSystemManager } from '../systems/ParticleSystemManager.js';
+import { colors } from '../../../shared/design-tokens.js';
 
 type GuessingSceneData = {
   initialValue?: number;
@@ -10,7 +12,7 @@ type GuessingSceneData = {
 
 export class GuessingScene extends Phaser.Scene {
   private track!: Phaser.GameObjects.Rectangle;
-  private handle!: Phaser.GameObjects.Circle;
+  private handle!: Phaser.GameObjects.Arc;
   private medianLine!: Phaser.GameObjects.Rectangle;
   private valueText!: Phaser.GameObjects.Text;
   private medianText!: Phaser.GameObjects.Text;
@@ -22,6 +24,12 @@ export class GuessingScene extends Phaser.Scene {
   private currentMedian: number | null = null;
   private leftLabel: string = '';
   private rightLabel: string = '';
+  
+  // Particle system
+  private particleManager!: ParticleSystemManager;
+  private trailEffectId: string | null = null;
+  private ambientEffectId: string | null = null;
+  private isDragging: boolean = false;
 
   constructor() {
     super('GuessingScene');
@@ -37,6 +45,9 @@ export class GuessingScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor('#111111');
 
+    // Initialize particle system
+    this.particleManager = new ParticleSystemManager(this);
+
     // Spectrum gradient bar
     this.spectrumBar = this.add.graphics();
 
@@ -44,7 +55,7 @@ export class GuessingScene extends Phaser.Scene {
     this.track = this.add.rectangle(0, 0, 600, 6, 0x888888, 0).setOrigin(0.5, 0.5);
 
     // Slider handle
-    this.handle = this.add.circle(0, 0, 14, 0xffcc00).setInteractive({ useHandCursor: true, draggable: true });
+    this.handle = this.add.arc(0, 0, 14, 0, 360, false, 0xffcc00).setInteractive({ useHandCursor: true, draggable: true });
 
     // Median indicator
     this.medianLine = this.add.rectangle(0, 0, 2, 28, 0x00e5ff, 1).setOrigin(0.5, 0.5);
@@ -87,6 +98,24 @@ export class GuessingScene extends Phaser.Scene {
 
     // Input
     this.input.setDraggable(this.handle, true);
+    
+    // Handle drag start
+    this.input.on('dragstart', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      if (gameObject !== this.handle) return;
+      this.isDragging = true;
+      
+      // Create brush stroke trail effect
+      this.trailEffectId = this.particleManager.createBrushStrokeTrail(
+        this.handle.x, 
+        this.handle.y,
+        {
+          colors: [colors.particles.primary, colors.particles.secondary],
+          count: 8,
+          duration: 800
+        }
+      );
+    });
+    
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject, dragX: number) => {
       if (gameObject !== this.handle) return;
       const { left, right } = this.track.getBounds();
@@ -94,8 +123,31 @@ export class GuessingScene extends Phaser.Scene {
       this.handle.setX(clampedX);
       this.currentValue = this.positionToValue(clampedX, left, right);
       this.valueText.setText(`${this.currentValue}`);
+      
+      // Update particle trail position
+      if (this.trailEffectId && this.isDragging) {
+        this.particleManager.updateTrailPosition(this.trailEffectId, clampedX, this.handle.y);
+      }
+      
       this.layout();
       this.emitValueChanged(this.currentValue);
+    });
+    
+    // Handle drag end
+    this.input.on('dragend', (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      if (gameObject !== this.handle) return;
+      this.isDragging = false;
+      
+      // Create organic burst effect on release
+      this.particleManager.createOrganicBurst(
+        this.handle.x,
+        this.handle.y,
+        {
+          colors: [colors.particles.primary, colors.particles.tertiary],
+          count: 15,
+          duration: 600
+        }
+      );
     });
 
     // Make track clickable and draggable for quick jumps
@@ -106,6 +158,18 @@ export class GuessingScene extends Phaser.Scene {
       this.handle.setX(clampedX);
       this.currentValue = this.positionToValue(clampedX, left, right);
       this.valueText.setText(`${this.currentValue}`);
+      
+      // Create burst effect on click
+      this.particleManager.createOrganicBurst(
+        clampedX,
+        this.handle.y,
+        {
+          colors: [colors.particles.secondary, colors.particles.tertiary],
+          count: 12,
+          duration: 500
+        }
+      );
+      
       this.layout();
       this.emitValueChanged(this.currentValue);
     });
@@ -116,6 +180,12 @@ export class GuessingScene extends Phaser.Scene {
       this.handle.setX(clampedX);
       this.currentValue = this.positionToValue(clampedX, left, right);
       this.valueText.setText(`${this.currentValue}`);
+      
+      // Update particle trail position during drag
+      if (this.trailEffectId && this.isDragging) {
+        this.particleManager.updateTrailPosition(this.trailEffectId, clampedX, this.handle.y);
+      }
+      
       this.layout();
       this.emitValueChanged(this.currentValue);
     });
@@ -123,11 +193,33 @@ export class GuessingScene extends Phaser.Scene {
     // Responsive
     this.scale.on('resize', () => this.layout());
     this.layout();
+    
+    // Create ambient particles after layout
+    this.createAmbientParticles();
   }
 
   public setMedian(median: number | null): void {
+    const previousMedian = this.currentMedian;
     this.currentMedian = median;
     this.medianText.setText(median == null ? '—' : `${median}`);
+    
+    // Create particle effect when median changes
+    if (previousMedian !== null && median !== null && previousMedian !== median) {
+      const { left, right } = this.track.getBounds();
+      const medianX = this.valueToPosition(median, left, right);
+      
+      this.particleManager.createOrganicBurst(
+        medianX,
+        this.track.y,
+        {
+          colors: [colors.particles.tertiary, colors.particles.trail],
+          count: 10,
+          duration: 400,
+          size: { min: 4, max: 8 }
+        }
+      );
+    }
+    
     this.layout();
   }
 
@@ -169,7 +261,6 @@ export class GuessingScene extends Phaser.Scene {
     // Render spectrum gradient bar
     this.spectrumBar.clear();
     const left = canvasCenterX - trackWidth / 2;
-    const right = canvasCenterX + trackWidth / 2;
     
     // Create gradient effect using multiple rectangles
     const gradientSteps = 50;
@@ -225,6 +316,34 @@ export class GuessingScene extends Phaser.Scene {
 
   private emitValueChanged(value: number): void {
     this.events.emit('slider:valueChanged', value);
+  }
+  
+  private createAmbientParticles(): void {
+    const { width, height } = this.scale;
+    const bounds = new Phaser.Geom.Rectangle(0, 0, width, height);
+    
+    this.ambientEffectId = this.particleManager.createAmbientParticles(bounds, {
+      colors: [colors.particles.trail, colors.decorative.dots],
+      count: 15,
+      size: { min: 2, max: 6 },
+      speed: { min: 5, max: 15 },
+      opacity: { min: 0.2, max: 0.5 }
+    });
+  }
+  
+  shutdown(): void {
+    // Clean up particle system
+    if (this.particleManager) {
+      this.particleManager.destroy();
+    }
+    
+    // Clean up specific effects
+    if (this.trailEffectId) {
+      this.particleManager.destroyEffect(this.trailEffectId);
+    }
+    if (this.ambientEffectId) {
+      this.particleManager.destroyEffect(this.ambientEffectId);
+    }
   }
 }
 
