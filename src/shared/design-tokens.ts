@@ -1,6 +1,6 @@
 /**
  * Design System Tokens
- * 
+ *
  * This file imports and exports design-system.json values as TypeScript constants
  * for type-safe access to the artistic design system throughout the application.
  */
@@ -82,16 +82,6 @@ export type ParticleConfig = typeof particles;
 export type ArtisticEffects = typeof artistic;
 
 // Utility functions for accessing design tokens
-export const getColor = (path: string): string => {
-  const keys = path.split('.');
-  let value: any = colors;
-  
-  for (const key of keys) {
-    value = value?.[key];
-  }
-  
-  return value || '#000000';
-};
 
 export const getFontFamily = (type: keyof typeof typography.fontFamilies): string => {
   return typography.fontFamilies[type];

@@ -4,7 +4,7 @@
  * This file demonstrates how to use the design tokens in components
  */
 
-import { colors, typography, spacing, getColor, getFontFamily, getSpacing } from '../design-tokens';
+import { colors, typography, spacing, getFontFamily, getSpacing } from '../design-tokens';
 
 // Example 1: Using color tokens directly
 export const exampleColorUsage = {
@@ -67,7 +67,7 @@ export const exampleSpacingUsage = {
 
 // Example 4: Using utility functions
 export const exampleUtilityUsage = {
-  dynamicColor: getColor('primary.brand'), // '#2B4C7E'
+  dynamicColor: colors.primary.brand, // '#2B4C7E' - now type-safe!
   dynamicFont: getFontFamily('handwritten'), // 'Kalam, cursive'
   dynamicSpacing: getSpacing('xl'), // '2rem'
 };
@@ -98,7 +98,7 @@ export interface ArtisticButtonProps {
   variant?: 'join' | 'host' | 'submit';
   size?: 'sm' | 'md' | 'lg';
   brushStroke?: keyof typeof colors.brushStrokes;
-  children: React.ReactNode;
+  children: string | JSX.Element | JSX.Element[];
 }
 
 export const getArtisticButtonStyles = (props: ArtisticButtonProps) => {

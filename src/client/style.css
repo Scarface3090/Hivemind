@@ -2569,3 +2569,191 @@ div[style*="rgba(255,255,255"] div,
 div[style*="rgba(255,255,255"] p {
   color: var(--text-primary) !important;
 }
+
+/* Artistic Card Styles */
+.artistic-card {
+  cursor: default;
+  will-change: transform;
+}
+
+.artistic-card:hover {
+  transform: translateY(-4px) rotate(0deg) !important;
+  box-shadow: 6px 6px 0px var(--text-primary), var(--shadow-xl) !important;
+}
+
+.consensus-card {
+  animation: slideInFromLeft 0.6s var(--ease-bounce);
+}
+
+.accolade-card {
+  animation: slideInFromRight 0.8s var(--ease-bounce);
+}
+
+.accolade-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.accolade-card:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+/* Keyframe Animations */
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-100px) rotate(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotate(var(--card-rotation, -1.5deg));
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(100px) rotate(10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotate(var(--card-rotation, 1.5deg));
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Particle Effects for Cards */
+.artistic-card::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  background: var(--particle-primary);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.artistic-card:hover::after {
+  animation: sparkle 0.6s ease-out;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 640px) {
+  .artistic-card {
+    transform: rotate(0deg) !important;
+  }
+  
+  .artistic-card:hover {
+    transform: translateY(-2px) rotate(0deg) !important;
+  }
+  
+  .consensus-card,
+  .accolade-card {
+    animation: fadeIn 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Brush stroke texture overlay */
+.brush-stroke-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(76, 175, 80, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(0, 188, 212, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* Artistic Section Header Styles */
+.artistic-section-header {
+  animation: slideInFromTop 0.8s var(--ease-bounce);
+}
+
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced card hover effects with staggered animations */
+.consensus-card:hover,
+.accolade-card:hover {
+  animation-play-state: paused;
+}
+
+/* Staggered animation delays for accolade cards */
+.accolade-card:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.accolade-card:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.accolade-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Particle overlay performance optimization */
+.particle-overlay {
+  will-change: auto;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .artistic-card,
+  .consensus-card,
+  .accolade-card,
+  .artistic-section-header {
+    animation: none !important;
+    transform: none !important;
+  }
+  
+  .artistic-card:hover {
+    transform: none !important;
+  }
+  
+  .particle-overlay {
+    display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .artistic-card {
+    border-width: 3px !important;
+    box-shadow: none !important;
+  }
+}

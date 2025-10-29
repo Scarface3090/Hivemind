@@ -10,15 +10,25 @@
 4. **Component Enhancement** - Reference design-system.json specifications for transforming existing components
 5. **Particle Configuration** - Use design-system.json particles.systems for enhanced Phaser particle effects
 
-**Example Usage:**
+**Example Usage with Type Safety:**
 
 ```typescript
 // src/shared/design-tokens.ts
 import designSystem from '../../.kiro/specs/hivemind-visual-redesign/design-system.json';
 
-export const colors = designSystem.designSystem.colors;
-export const typography = designSystem.designSystem.typography;
-export const particles = designSystem.designSystem.particles;
+// Export with proper type safety and const assertions for literal types
+export const colors = designSystem.designSystem.colors as const;
+export const typography = designSystem.designSystem.typography as const;
+export const particles = designSystem.designSystem.particles as const;
+export const components = designSystem.designSystem.components as const;
+
+// Type-safe component accessor with generic keyed return
+export const getComponent = <K extends keyof typeof components>(
+  component: K
+): (typeof components)[K] => components[component];
+
+// Alternative: Direct access for better type inference
+// Usage: components.buttons.primary instead of getComponent('buttons').primary
 ```
 
 ## Important Implementation Guidelines
@@ -43,7 +53,7 @@ Each checkpoint will prompt: "Please manually run: `npm run build && npm run dep
 
 - [x] 1. Design System Foundation
 
-  - **Create src/shared/design-tokens.ts that imports and exports design-system.json values as TypeScript constants**
+  - **Create src/shared/design-tokens.ts with type-safe imports using const assertions and generic component accessor**
   - Add Google Fonts imports for Kalam (handwritten), Fredoka One (display), and Open Sans (body) to existing HTML
   - Create CSS custom properties from design-system.json color palette, typography, and spacing values
   - Set up paper texture background utilities and brush stroke effect classes

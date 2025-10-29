@@ -7,8 +7,11 @@ import type { PlayerScoreSummary } from '../../../shared/types/ScoreSummary.js';
 import { colors, spacing } from '../../styles/tokens.js';
 import { SpectrumPill } from '../../components/SpectrumPill.js';
 import HistogramPhaser from '../../components/HistogramPhaser.js';
-import { ConsensusLabel } from '../../components/ConsensusLabel.js';
+
 import { ConsensusErrorBoundary } from '../../components/ConsensusErrorBoundary.js';
+import { ConsensusCard } from '../../components/ConsensusCard.js';
+import { AccoladeCard } from '../../components/AccoladeCard.js';
+import { ArtisticSectionHeader } from '../../components/ArtisticSectionHeader.js';
 
 
 const useResults = (gameId: string | undefined) =>
@@ -19,23 +22,7 @@ const useResults = (gameId: string | undefined) =>
     staleTime: 60_000,
   });
 
-const AccoladeBadge = ({ label }: { label: string }) => (
-  <span
-    className="chip"
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-      padding: '4px 8px',
-      borderRadius: 999,
-      background: 'rgba(255,255,255,0.08)',
-      color: '#fff',
-      fontSize: 12,
-    }}
-  >
-    {label}
-  </span>
-);
+
 
 
 
@@ -95,7 +82,9 @@ const ResultsView = (): JSX.Element => {
             </header>
 
             <section aria-labelledby="histogram-title" style={{ marginBottom: spacing.lg }}>
-              <h3 id="histogram-title" style={{ color: colors.lightGray, marginBottom: spacing.sm }}>Distribution</h3>
+              <ArtisticSectionHeader icon="📊">
+                Distribution
+              </ArtisticSectionHeader>
               <div style={{ width: '100%' }}>
                 <HistogramPhaser
                   className="results-histogram"
@@ -126,16 +115,14 @@ const ResultsView = (): JSX.Element => {
 
             {/* Consensus section */}
             <section aria-labelledby="consensus-title" style={{ marginBottom: spacing.lg }}>
-              <h3 id="consensus-title" style={{ color: colors.lightGray, marginBottom: spacing.sm }}>Community Consensus</h3>
+              <ArtisticSectionHeader icon="🧠">
+                Community Consensus
+              </ArtisticSectionHeader>
               <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                 <ConsensusErrorBoundary>
                   {data.scoreSummary.consensus ? (
                     <div style={{ width: '100%', maxWidth: '480px' }}>
-                      <ConsensusLabel 
-                        consensus={data.scoreSummary.consensus}
-                        variant="default"
-                        showDescription={true}
-                      />
+                      <ConsensusCard consensus={data.scoreSummary.consensus.label} />
                     </div>
                   ) : (
                     <div 
@@ -163,28 +150,27 @@ const ResultsView = (): JSX.Element => {
             </section>
 
             <section aria-labelledby="accolades-title" style={{ marginBottom: spacing.lg }}>
-              <h3 id="accolades-title" style={{ color: colors.lightGray, marginBottom: spacing.sm }}>Accolades</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: spacing.sm }}>
+              <ArtisticSectionHeader icon="🏆">
+                Accolades
+              </ArtisticSectionHeader>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: spacing.md }}>
                 {(() => {
                   const { bestAccuracy, topPersuasion, mostContrarian } = data.scoreSummary.accolades;
                   const players = data.scoreSummary.players;
                   const acc = [
-                    { key: 'Psychic', title: 'Psychic (Closest to Target)', user: findPlayer(players, bestAccuracy) },
-                    { key: 'Top Comment', title: 'Top Comment (Most Persuasive)', user: findPlayer(players, topPersuasion) },
-                    { key: 'Unpopular Opinion', title: 'Unpopular Opinion (Most Contrarian)', user: findPlayer(players, mostContrarian) },
+                    { key: 'Psychic' as const, title: 'Psychic (Closest to Target)', user: findPlayer(players, bestAccuracy) },
+                    { key: 'Top Comment' as const, title: 'Top Comment (Most Persuasive)', user: findPlayer(players, topPersuasion) },
+                    { key: 'Unpopular Opinion' as const, title: 'Unpopular Opinion (Most Contrarian)', user: findPlayer(players, mostContrarian) },
                   ];
                   return acc
                     .filter((a) => a.user)
                     .map((a) => (
-                      <div key={a.key} className="card" style={{ padding: spacing.md, borderRadius: 12, background: 'rgba(255,255,255,0.06)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ color: '#fff', fontWeight: 600 }}>{a.title}</div>
-                            <div style={{ color: colors.lightGray, fontSize: 12 }}>@{a.user!.username}</div>
-                          </div>
-                          <AccoladeBadge label={a.key} />
-                        </div>
-                      </div>
+                      <AccoladeCard
+                        key={a.key}
+                        title={a.title}
+                        username={a.user!.username}
+                        accoladeType={a.key}
+                      />
                     ));
                 })()}
               </div>
