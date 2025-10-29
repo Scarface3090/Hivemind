@@ -4,7 +4,7 @@
   "description": "Automatically checks the bug_tracker.md file whenever errors, bugs, or issues are encountered to ensure proper reference and tracking before proceeding with fixes",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "docs/Bug_tracking.md",
       "**/*.ts",

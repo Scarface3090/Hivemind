@@ -4,7 +4,7 @@
   "description": "Automatically updates the project README file whenever new functions, functionality, or features are implemented in the codebase",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "src/**/*.ts",
       "src/**/*.tsx",
