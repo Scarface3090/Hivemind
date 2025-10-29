@@ -18,5 +18,6 @@
   "files.exclude": {
     "**/.git": false
   },
-  "kiroAgent.configureMCP": "Enabled"
+  "kiroAgent.configureMCP": "Enabled",
+  "typescript.autoClosingTags": false
 }

@@ -1,6 +1,25 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { colors, particles, performance } from '../../shared/design-tokens.js';
 
+interface ParticleSystem {
+  count: number;
+  size: string;
+  colors: string[];
+  speed: string;
+  opacity: string;
+  movement: string;
+  style: string;
+  texture?: string;
+}
+
+interface ParticleSystems {
+  ambient: ParticleSystem;
+  brushStroke: ParticleSystem;
+  interaction: ParticleSystem;
+  trail?: ParticleSystem;
+  celebration?: ParticleSystem;
+}
+
 interface ParticleOverlayProps {
   particleCount?: number;
   colors?: string[];
@@ -17,6 +36,8 @@ interface Particle {
   size: number;
   color: string;
   opacity: number;
+  initialOpacity: number;
+  rotation: number;
   life: number;
   maxLife: number;
 }
@@ -33,8 +54,13 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
   const particlesRef = useRef<Particle[]>([]);
   const particleColors = useMemo(() => {
     if (providedColors) return providedColors;
-    
-    const systems = particles.systems as any;
+
+    // Runtime validation and safe access to particles.systems
+    const systems = particles.systems as ParticleSystems;
+    if (!systems || typeof systems !== 'object') {
+      return [colors.particles.primary];
+    }
+
     switch (effectType) {
       case 'brushStroke':
         return systems.brushStroke?.colors || [colors.particles.primary];
@@ -45,12 +71,16 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         return systems.ambient?.colors || [colors.particles.tertiary];
     }
   }, [providedColors, effectType]);
-  
+
   const adjustedParticleCount = useMemo(() => {
     const maxCounts = performance.particles.maxCount;
-    const deviceMax = performanceLevel === 'high' ? maxCounts.desktop : 
-                     performanceLevel === 'medium' ? maxCounts.tablet : maxCounts.mobile;
-    
+    const deviceMax =
+      performanceLevel === 'high'
+        ? maxCounts.desktop
+        : performanceLevel === 'medium'
+          ? maxCounts.tablet
+          : maxCounts.mobile;
+
     return Math.min(particleCount, Math.floor(deviceMax * 0.2)); // Use 20% of max for overlay
   }, [particleCount, performanceLevel]);
 
@@ -71,30 +101,39 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
     };
 
     const createParticle = (): Particle => {
-      const systemConfig = (particles.systems as any)[effectType] || particles.systems.ambient;
-      
+      const systems = particles.systems as ParticleSystems;
+      const systemConfig = systems[effectType] || systems.ambient;
+
       // Parse size range from string format like "4-12px"
-      const sizeStr = systemConfig.size || '4-12px';
+      const sizeStr = systemConfig?.size || '4-12px';
       const sizeMatch = sizeStr.toString().match(/(\d+)-(\d+)/);
-      const sizeRange = sizeMatch 
-        ? { min: parseInt(sizeMatch[1]), max: parseInt(sizeMatch[2]) }
-        : { min: 4, max: 12 };
-      
+      const sizeRange =
+        sizeMatch && sizeMatch[1] && sizeMatch[2]
+          ? { min: parseInt(sizeMatch[1], 10), max: parseInt(sizeMatch[2], 10) }
+          : { min: 4, max: 12 };
+
       // Parse speed range from string format like "0.3-1.0px/s"
-      const speedStr = systemConfig.speed || '0.3-1.0px/s';
+      const speedStr = systemConfig?.speed || '0.3-1.0px/s';
       const speedMatch = speedStr.toString().match(/([\d.]+)-([\d.]+)/);
-      const speedRange = speedMatch
-        ? { min: parseFloat(speedMatch[1]), max: parseFloat(speedMatch[2]) }
-        : { min: 0.3, max: 1.0 };
-      
+      const speedRange =
+        speedMatch && speedMatch[1] && speedMatch[2]
+          ? { min: parseFloat(speedMatch[1]), max: parseFloat(speedMatch[2]) }
+          : { min: 0.3, max: 1.0 };
+
+      const initialOpacity = effectType === 'ambient' ? 0.6 : 0.8;
+
       return {
         x: Math.random() * canvas.offsetWidth,
         y: Math.random() * canvas.offsetHeight,
         vx: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
         vy: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
         size: Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min,
-        color: particleColors[Math.floor(Math.random() * particleColors.length)] || colors.particles.primary,
-        opacity: effectType === 'ambient' ? 0.6 : 0.8,
+        color:
+          particleColors[Math.floor(Math.random() * particleColors.length)] ||
+          colors.particles.primary,
+        opacity: initialOpacity,
+        initialOpacity: initialOpacity,
+        rotation: Math.random() * Math.PI,
         life: 0,
         maxLife: Math.random() * 300 + 150,
       };
@@ -111,7 +150,10 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         particle.life++;
 
         // Fade out over time
-        particle.opacity = Math.max(0, 0.8 - (particle.life / particle.maxLife) * 0.8);
+        particle.opacity = Math.max(
+          0,
+          particle.initialOpacity - (particle.life / particle.maxLife) * particle.initialOpacity
+        );
 
         // Reset particle when it dies
         if (particle.life >= particle.maxLife) {
@@ -133,11 +175,19 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         ctx.save();
         ctx.globalAlpha = particle.opacity;
         ctx.fillStyle = particle.color;
-        
+
         if (effectType === 'brushStroke') {
           // Draw organic brush stroke shape
           ctx.beginPath();
-          ctx.ellipse(particle.x, particle.y, particle.size, particle.size * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+          ctx.ellipse(
+            particle.x,
+            particle.y,
+            particle.size,
+            particle.size * 0.7,
+            particle.rotation,
+            0,
+            Math.PI * 2
+          );
           ctx.fill();
         } else {
           // Draw circular particle
@@ -145,7 +195,7 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
           ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
           ctx.fill();
         }
-        
+
         ctx.restore();
       });
     };

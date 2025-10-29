@@ -44,10 +44,6 @@ export class HistogramScene extends Phaser.Scene {
     this.scale.on('resize', () => this.draw());
     this.draw();
     
-    // Create celebration particles after a short delay
-    this.time.delayedCall(500, () => {
-      this.createCelebrationParticles();
-    });
   }
 
   public updateData(config: Partial<HistogramSceneConfig>): void {
@@ -186,6 +182,5 @@ export class HistogramScene extends Phaser.Scene {
     if (this.particleManager) {
       this.particleManager.destroy();
     }
-    super.destroy();
   }
 }

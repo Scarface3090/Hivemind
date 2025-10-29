@@ -4,7 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 Object.defineProperty(global, 'document', {
   value: {
     createElement: vi.fn().mockReturnValue({
-      getContext: vi.fn().mockReturnValue({})
+      getContext: vi.fn().mockReturnValue({}),
+      remove: vi.fn()
     })
   }
 });
@@ -45,11 +46,15 @@ const mockScene = {
       maxParticles: 50,
       frequency: 100,
       explode: vi.fn(),
-      setPosition: vi.fn()
+      setPosition: vi.fn(),
+      getAliveParticleCount: vi.fn().mockReturnValue(10)
     })
   },
   time: {
     delayedCall: vi.fn()
+  },
+  textures: {
+    exists: vi.fn().mockReturnValue(true)
   }
 };
 
