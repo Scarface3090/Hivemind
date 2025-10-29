@@ -66,21 +66,26 @@ export const AccoladeCard: React.FC<AccoladeCardProps> = ({
       brushStrokeColor={badgeColor}
       showParticles={true}
     >
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        gap: spacing.md,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: spacing.md,
+        }}
+        aria-label={`Accolade: ${accoladeType}`}
+      >
         <div style={{ flex: 1 }}>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: spacing.sm,
-            marginBottom: spacing.xs,
-          }}>
-            <span 
-              style={{ 
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              marginBottom: spacing.xs,
+            }}
+          >
+            <span
+              style={{
                 fontSize: typography.fontSizes.xl,
                 lineHeight: 1,
               }}
@@ -88,25 +93,29 @@ export const AccoladeCard: React.FC<AccoladeCardProps> = ({
             >
               {icon}
             </span>
-            <div style={{ 
-              fontFamily: typography.fontFamilies.display,
-              fontSize: typography.fontSizes.lg,
-              fontWeight: typography.fontWeights.bold,
-              textShadow: '1px 1px 2px rgba(0, 0, 0, 0.1)',
-            }}>
+            <div
+              style={{
+                fontFamily: typography.fontFamilies.display,
+                fontSize: typography.fontSizes.lg,
+                fontWeight: typography.fontWeights.bold,
+                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.1)',
+              }}
+            >
               {title}
             </div>
           </div>
-          <div style={{ 
-            fontSize: typography.fontSizes.sm,
-            opacity: 0.8,
-            fontWeight: typography.fontWeights.medium,
-            marginLeft: `calc(${typography.fontSizes.xl} + ${spacing.sm})`,
-          }}>
+          <div
+            style={{
+              fontSize: typography.fontSizes.sm,
+              opacity: 0.8,
+              fontWeight: typography.fontWeights.medium,
+              marginLeft: `calc(${typography.fontSizes.xl} + ${spacing.sm})`,
+            }}
+          >
             @{username}
           </div>
         </div>
-        <div 
+        <div
           style={{
             background: badgeColor,
             color: colors.text.onDark,

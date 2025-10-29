@@ -2589,13 +2589,7 @@ div[style*="rgba(255,255,255"] p {
   animation: slideInFromRight 0.8s var(--ease-bounce);
 }
 
-.accolade-card:nth-child(2) {
-  animation-delay: 0.1s;
-}
 
-.accolade-card:nth-child(3) {
-  animation-delay: 0.2s;
-}
 
 /* Keyframe Animations */
 @keyframes slideInFromLeft {

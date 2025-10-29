@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { colors } from '../../shared/design-tokens.js';
 
 interface ParticleOverlayProps {
@@ -21,12 +21,21 @@ interface Particle {
 
 export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
   particleCount = 8,
-  colors: particleColors = [colors.particles.primary, colors.particles.secondary, colors.particles.tertiary],
+  colors: providedColors,
   className = '',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
+  const particleColors = useMemo(
+    () =>
+      providedColors ?? [
+        colors.particles.primary,
+        colors.particles.secondary,
+        colors.particles.tertiary,
+      ],
+    [providedColors]
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,8 +59,10 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       vx: (Math.random() - 0.5) * 0.5,
       vy: (Math.random() - 0.5) * 0.5,
       size: Math.random() * 3 + 1,
-      color: particleColors[Math.floor(Math.random() * particleColors.length)] || colors.particles.primary,
-      opacity: Math.random() * 0.6 + 0.2,
+      color:
+        particleColors[Math.floor(Math.random() * particleColors.length)] ||
+        colors.particles.primary,
+      opacity: 0.8,
       life: 0,
       maxLife: Math.random() * 200 + 100,
     });
@@ -84,7 +95,7 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
 
     const drawParticles = () => {
       ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
-      
+
       particlesRef.current.forEach((particle) => {
         ctx.save();
         ctx.globalAlpha = particle.opacity;

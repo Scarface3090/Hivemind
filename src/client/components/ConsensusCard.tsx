@@ -8,70 +8,52 @@ interface ConsensusCardProps {
   className?: string;
 }
 
-const getConsensusIcon = (consensus: ConsensusLabelType): string => {
-  switch (consensus) {
-    case ConsensusLabelType.BattleRoyale:
-      return '⚔️';
-    case ConsensusLabelType.PerfectHivemind:
-      return '🤝';
-    case ConsensusLabelType.EchoChamber:
-      return '🔄';
-    case ConsensusLabelType.TotalAnarchy:
-      return '🌪️';
-    case ConsensusLabelType.DumpsterFire:
-      return '🔥';
-    case ConsensusLabelType.InsufficientData:
-      return '❓';
-    default:
-      return '❓';
-  }
-};
+const CONSENSUS_CONFIG = {
+  [ConsensusLabelType.BattleRoyale]: {
+    icon: '⚔️',
+    title: 'Battle Royale',
+    description: 'The community is at war',
+  },
+  [ConsensusLabelType.PerfectHivemind]: {
+    icon: '🤝',
+    title: 'Perfect Hivemind',
+    description: 'The hivemind speaks as one',
+  },
+  [ConsensusLabelType.EchoChamber]: {
+    icon: '🔄',
+    title: 'Echo Chamber',
+    description: 'Voices echo in harmony',
+  },
+  [ConsensusLabelType.TotalAnarchy]: {
+    icon: '🌪️',
+    title: 'Total Anarchy',
+    description: 'Chaos reigns supreme',
+  },
+  [ConsensusLabelType.DumpsterFire]: {
+    icon: '🔥',
+    title: 'Dumpster Fire',
+    description: 'Everything is on fire',
+  },
+  [ConsensusLabelType.InsufficientData]: {
+    icon: '❓',
+    title: 'Insufficient Data',
+    description: 'Not enough data to decide',
+  },
+} as const;
 
-const getConsensusTitle = (consensus: ConsensusLabelType): string => {
-  switch (consensus) {
-    case ConsensusLabelType.BattleRoyale:
-      return 'Battle Royale';
-    case ConsensusLabelType.PerfectHivemind:
-      return 'Perfect Hivemind';
-    case ConsensusLabelType.EchoChamber:
-      return 'Echo Chamber';
-    case ConsensusLabelType.TotalAnarchy:
-      return 'Total Anarchy';
-    case ConsensusLabelType.DumpsterFire:
-      return 'Dumpster Fire';
-    case ConsensusLabelType.InsufficientData:
-      return 'Insufficient Data';
-    default:
-      return 'Unknown';
-  }
-};
-
-const getConsensusDescription = (consensus: ConsensusLabelType): string => {
-  switch (consensus) {
-    case ConsensusLabelType.BattleRoyale:
-      return 'The community is at war';
-    case ConsensusLabelType.PerfectHivemind:
-      return 'The hivemind speaks as one';
-    case ConsensusLabelType.EchoChamber:
-      return 'Voices echo in harmony';
-    case ConsensusLabelType.TotalAnarchy:
-      return 'Chaos reigns supreme';
-    case ConsensusLabelType.DumpsterFire:
-      return 'Everything is on fire';
-    case ConsensusLabelType.InsufficientData:
-      return 'Not enough data to decide';
-    default:
-      return 'Unable to determine consensus';
-  }
+const getConsensusConfig = (consensus: ConsensusLabelType) => {
+  return CONSENSUS_CONFIG[consensus] || {
+    icon: '❓',
+    title: 'Unknown',
+    description: 'Unable to determine consensus',
+  };
 };
 
 export const ConsensusCard: React.FC<ConsensusCardProps> = ({
   consensus,
   className = '',
 }) => {
-  const icon = getConsensusIcon(consensus);
-  const title = getConsensusTitle(consensus);
-  const description = getConsensusDescription(consensus);
+  const { icon, title, description } = getConsensusConfig(consensus);
 
   return (
     <ArtisticCard
