@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "name": "Design System Extractor",
+  "description": "Analyzes visual references (images, mockups, screenshots) and automatically generates a comprehensive design system with type-safe implementation files. Creates design-system.json, TypeScript design tokens, steering rules, and component templates for consistent visual implementation across the entire project.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "design-references/*",
+      "mockups/*",
+      "assets/design/*",
+      "*.png",
+      "*.jpg",
+      "*.jpeg",
+      "*.svg",
+      "*.figma"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Visual references have been provided for design system extraction. Create a comprehensive design system by analyzing the visual references and generating systematic design specifications.\n\nYour task is to:\n\n1. **Analyze Visual References**: Extract colors, typography, spacing, component patterns, animations, and decorative elements from the provided images/mockups\n\n2. **Generate Design System JSON**: Create a comprehensive design-system.json file with:\n   - Color palette (primary, secondary, background, text, interactive, status, particles)\n   - Typography system (font families, sizes, weights, line heights)\n   - Spacing scale (xs, sm, md, lg, xl, 2xl, 3xl, 4xl)\n   - Border radius, shadows, and visual effects\n   - Animation specifications (durations, easings, particle effects)\n   - Component specifications (buttons, cards, inputs, navigation)\n   - Responsive breakpoints and device optimizations\n   - Performance settings for particle systems and animations\n\n3. **Create Type-Safe Design Tokens**: Generate src/shared/design-tokens.ts with:\n   - Type-safe exports using 'as const' assertions\n   - Generic component accessor functions\n   - Utility functions for color, spacing, and animation access\n   - TypeScript interfaces for all design token types\n\n4. **Generate Steering Rules**: Create .kiro/steering/design-system.md with:\n   - File pattern matching for automatic consistency enforcement\n   - Mandatory design token usage guidelines\n   - Implementation examples and anti-patterns\n   - Quality assurance requirements\n\n5. **Create Component Templates**: Generate framework-specific component templates in design-templates/ directory:\n   - React components with TypeScript and design token integration\n   - Proper prop interfaces and variant handling\n   - Hover effects and animations based on extracted patterns\n   - Mobile-optimized touch interactions\n\n6. **Ensure Systematic Consistency**: Transform subjective visual preferences into objective, maintainable specifications that prevent design inconsistencies through:\n   - Single source of truth (design-system.json)\n   - Compile-time type safety\n   - Automated consistency enforcement\n   - Performance optimization built-in\n\n**Key Requirements**:\n- Extract actual colors, fonts, and patterns from the visual references\n- Create realistic component specifications based on observed patterns\n- Generate performance-optimized particle systems if decorative elements are present\n- Ensure mobile-first responsive design considerations\n- Include accessibility compliance (WCAG AA contrast ratios)\n- Create maintainable, scalable design token architecture\n\n**Output Structure**:\n```\n├── design-system.json              # Complete design specification\n├── src/shared/design-tokens.ts     # Type-safe design token exports\n├── .kiro/steering/design-system.md # Automatic consistency enforcement\n└── design-templates/               # Component implementation templates\n    ├── Button.tsx\n    ├── Card.tsx\n    ├── Input.tsx\n    └── README.md\n```\n\nAnalyze the provided visual references systematically and create a comprehensive design system that enables consistent, maintainable visual implementation across the entire project."
+  }
+}
