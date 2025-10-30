@@ -103,7 +103,7 @@ export const DifficultySelector = ({
               type="button"
               className={`difficulty-option ${
                 isSelected ? 'difficulty-option--selected' : ''
-              } ${isDisabled ? 'difficulty-option--disabled' : ''}`}
+              } ${isDisabled ? 'difficulty-option--disabled' : ''} transition-colors transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md rounded-2xl border-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-400 brush-stroke`}
               onClick={() => {
                 // Optimistic UI update
                 onDifficultySelect(option.level);

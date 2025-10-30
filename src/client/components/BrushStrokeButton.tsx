@@ -39,9 +39,13 @@ export const BrushStrokeButton: React.FC<BrushStrokeButtonProps> = ({
   const handleClick = useCallback(() => {
     if (disabled || !onClick) return;
 
-    // Clear any existing timeout before setting a new one
+    // Reset state first to avoid a stuck burst when rapidly clicking
+    setShowBurst(false);
+
+    // Clear any existing timeout after resetting state
     if (burstTimeoutRef.current !== null) {
       clearTimeout(burstTimeoutRef.current);
+      burstTimeoutRef.current = null;
     }
 
     // Trigger burst effect

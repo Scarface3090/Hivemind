@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -10,6 +10,7 @@ import { ContextSelector } from '../../components/ContextSelector.js';
 import { DifficultySelector } from '../../components/DifficultySelector.js';
 import { ContextSelectionErrorBoundary } from '../../components/ContextSelectionErrorBoundary.js';
 import { LoadingSpinner } from '../../components/LoadingSpinner.js';
+import HostParticlesOverlay, { HostParticlesOverlayHandle } from '../../components/HostParticlesOverlay.js';
 
 // No hardcoded host ID; server uses authenticated context
 
@@ -35,6 +36,7 @@ const initialFormState: HostFormState = {
 };
 
 const HostView = (): JSX.Element => {
+  const particlesRef = useRef<HostParticlesOverlayHandle | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [formState, setFormState] = useState<HostFormState>(initialFormState);
@@ -125,6 +127,8 @@ const HostView = (): JSX.Element => {
     setSelectedContextData(contextData);
     setCurrentStep('difficulty');
     setLastDraft(null); // Clear any existing draft
+    // Visual feedback: subtle particle burst near top center
+    particlesRef.current?.emitBurst(Math.round(window.innerWidth / 2), 160);
   }, [contextsData]);
 
   // Handle context selection errors
@@ -161,6 +165,8 @@ const HostView = (): JSX.Element => {
       };
     });
     setCurrentStep('clue');
+    // Visual feedback: subtle particle burst near top center
+    particlesRef.current?.emitBurst(Math.round(window.innerWidth / 2), 160);
     
     // Automatically fetch draft when both context and difficulty are selected
     // Pass context and difficulty directly to avoid stale formState
@@ -307,6 +313,7 @@ const HostView = (): JSX.Element => {
 
   return (
     <section className="host-layout">
+      <HostParticlesOverlay ref={particlesRef} />
       <header>
         <h2 className="text-2xl font-semibold">Host a game</h2>
         <p className="surface-muted">
@@ -337,8 +344,8 @@ const HostView = (): JSX.Element => {
 
           {/* Step 2: Difficulty Selection */}
           {currentStep === 'difficulty' && (
-            <div className="host-form__section">
-              <div className="host-form__breadcrumb">
+            <div className="host-form__section animate-brush-stroke">
+              <div className="host-form__breadcrumb artistic-breadcrumb">
                 <button
                   type="button"
                   className="host-form__back-button"
@@ -372,7 +379,7 @@ const HostView = (): JSX.Element => {
           {/* Step 3: Clue and Duration */}
           {currentStep === 'clue' && (
             <>
-              <div className="host-form__breadcrumb">
+              <div className="host-form__breadcrumb artistic-breadcrumb">
                 <button
                   type="button"
                   className="host-form__back-button"

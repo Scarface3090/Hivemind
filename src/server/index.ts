@@ -3,7 +3,7 @@ import type { InitResponse, IncrementResponse, DecrementResponse } from '../shar
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { contentRefreshRouter, gameRouter, contextRouter, devRouter } from './core/routes/index.js';
-import { bootstrapServer } from './main.js';
+// Removed bootstrapServer import; avoid using Redis/Settings before a request context
 
 const app = express();
 
@@ -152,29 +152,37 @@ const port = process.env.WEBBIT_PORT || 3000;
 const server = createServer(app);
 server.on('error', (err) => console.error(`server error; ${err.stack}`));
 
-// Initialize server with CSV loading
-const startServer = async () => {
-  try {
-    console.log('Starting server initialization...');
-    
-    // Run bootstrap initialization to load CSV content and setup cache
-    await bootstrapServer();
-    
-    // Start server after successful initialization
-    server.listen(port, () => {
-      console.log(`http://localhost:${port}`);
-      console.log('Server started successfully with content loaded');
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    
-    // Start server anyway with fallback content
-    server.listen(port, () => {
-      console.log(`http://localhost:${port}`);
-      console.warn('Server started with fallback content due to initialization error');
-    });
-  }
-};
-
-// Start the server
-startServer();
+// Start the server without pre-initializing Redis/Settings-bound services.
+// Content cache will be ensured lazily during the first request via service functions.
+server.listen(port, () => {
+  console.log(`http://localhost:${port}`);
+  console.log('Server started. Content cache will initialize on-demand.');
+  
+  // Best-effort warmup: trigger content refresh inside a request context
+  // Uses fetch (no http/https modules) and retries with backoff; non-blocking
+  (async () => {
+    const baseUrl = `http://localhost:${port}`;
+    const url = `${baseUrl}/internal/scheduler/content-refresh`;
+    const maxAttempts = 5;
+    let attempt = 0;
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        if (res.ok) {
+          const body = await res.json().catch(() => ({}));
+          console.log(`[Warmup] Content refresh ok (attempt ${attempt})`, body);
+          break;
+        } else {
+          const text = await res.text().catch(() => '');
+          console.warn(`[Warmup] Content refresh failed (attempt ${attempt}) ${res.status} ${res.statusText} ${text}`);
+        }
+      } catch (err) {
+        console.warn(`[Warmup] Content refresh error (attempt ${attempt})`, err);
+      }
+      // Exponential backoff: 500ms, 1s, 2s, 4s, 8s
+      const delayMs = 500 * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  })().catch((e) => console.warn('[Warmup] Unexpected warmup error', e));
+});

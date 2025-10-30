@@ -42,12 +42,14 @@ export const ContextSelector = ({
           </p>
         </div>
         <div className="context-selector__grid">
-          {/* Loading skeleton */}
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="context-card context-card--loading" aria-hidden="true">
-              <div className="context-card__content">
-                <div className="context-card__name context-card__name--skeleton"></div>
-                <div className="context-card__count context-card__count--skeleton"></div>
+            <div key={i} className="difficulty-option difficulty-option--loading" aria-hidden="true">
+              <div className="difficulty-option__content">
+                <div className="difficulty-option__header">
+                  <div className="difficulty-option__name difficulty-option__name--skeleton"></div>
+                </div>
+                <div className="difficulty-option__description difficulty-option__description--skeleton"></div>
+                <div className="difficulty-option__count difficulty-option__count--skeleton"></div>
               </div>
             </div>
           ))}
@@ -88,33 +90,40 @@ export const ContextSelector = ({
       </div>
       
       <div className="context-selector__grid">
-        {contexts.map((contextSummary) => (
-          <button
-            key={contextSummary.context}
-            type="button"
-            className={`context-card ${
-              selectedContext === contextSummary.context ? 'context-card--selected' : ''
-            } ${disabled ? 'context-card--disabled' : ''}`}
-            onClick={() => {
-              if (!disabled) {
-                // Optimistic UI update - immediately show selection
-                onContextSelect(contextSummary.context);
-              }
-            }}
-            disabled={disabled}
-            aria-pressed={selectedContext === contextSummary.context}
-          >
-            <div className="context-card__content">
-              <h3 className="context-card__name">{contextSummary.context}</h3>
-              <p className="context-card__count">
-                {contextSummary.totalCount} spectrum{contextSummary.totalCount === 1 ? '' : 's'}
-              </p>
-            </div>
-            <div className="context-card__indicator" aria-hidden="true">
-              {selectedContext === contextSummary.context ? '✓' : ''}
-            </div>
-          </button>
-        ))}
+        {contexts.map((contextSummary) => {
+          const isSelected = selectedContext === contextSummary.context;
+          const isDisabled = !!disabled;
+          return (
+            <button
+              key={contextSummary.context}
+              type="button"
+              className={`difficulty-option ${
+                isSelected ? 'difficulty-option--selected' : ''
+              } ${isDisabled ? 'difficulty-option--disabled' : ''} transition-colors transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md rounded-2xl border-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-400 brush-stroke`}
+              onClick={() => {
+                if (!isDisabled) {
+                  onContextSelect(contextSummary.context);
+                }
+              }}
+              disabled={isDisabled}
+              aria-pressed={isSelected}
+            >
+              <div className="difficulty-option__content">
+                <div className="difficulty-option__header">
+                  <h3 className="difficulty-option__name">{contextSummary.context}</h3>
+                </div>
+                <div className="difficulty-option__count">
+                  <span className="difficulty-option__count-text">
+                    {contextSummary.totalCount} spectrum{contextSummary.totalCount === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+              <div className="difficulty-option__indicator" aria-hidden="true">
+                {isSelected ? '✓' : ''}
+              </div>
+            </button>
+          );
+        })}
       </div>
       
       {contexts.length === 0 && (

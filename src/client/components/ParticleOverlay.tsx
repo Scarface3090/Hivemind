@@ -40,6 +40,8 @@ interface Particle {
   rotation: number;
   life: number;
   maxLife: number;
+  // Number of frames to fade in from 0 to initialOpacity after spawn/reset
+  fadeIn: number;
 }
 
 export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
@@ -91,6 +93,9 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Keep fade in short to avoid visible pops while remaining subtle
+    const fadeInFrames = 20;
+
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width * window.devicePixelRatio;
@@ -131,11 +136,13 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         color:
           particleColors[Math.floor(Math.random() * particleColors.length)] ||
           colors.particles.primary,
-        opacity: initialOpacity,
+        // Start invisible and fade in to avoid popping
+        opacity: 0,
         initialOpacity: initialOpacity,
         rotation: Math.random() * Math.PI,
         life: 0,
         maxLife: Math.random() * 300 + 150,
+        fadeIn: fadeInFrames,
       };
     };
 
@@ -149,15 +156,25 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         particle.y += particle.vy;
         particle.life++;
 
-        // Fade out over time
-        particle.opacity = Math.max(
+        // Compute base fade-out over life
+        const baseOpacity = Math.max(
           0,
           particle.initialOpacity - (particle.life / particle.maxLife) * particle.initialOpacity
         );
+        // Apply fade-in on spawn/reset
+        if (particle.fadeIn > 0) {
+          const progress = 1 - particle.fadeIn / fadeInFrames; // 0 -> 1
+          particle.opacity = baseOpacity * Math.max(0, Math.min(1, progress));
+          particle.fadeIn -= 1;
+        } else {
+          particle.opacity = baseOpacity;
+        }
 
         // Reset particle when it dies
         if (particle.life >= particle.maxLife) {
-          Object.assign(particle, createParticle());
+          // Recreate but keep it invisible initially; it will fade in smoothly
+          const fresh = createParticle();
+          Object.assign(particle, fresh);
         }
 
         // Wrap around edges
