@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import Phaser from 'phaser';
 import { ParticleSystemManager } from '../game/systems/ParticleSystemManager.js';
 
@@ -25,7 +25,7 @@ const HostParticlesOverlay = forwardRef<HostParticlesOverlayHandle>(function Hos
 
       preload(): void {
         // Generate a simple round particle texture to avoid external assets
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        const g = this.make.graphics({ x: 0, y: 0 });
         g.fillStyle(0xffffff, 1);
         g.fillCircle(16, 16, 16);
         g.generateTexture('particle-texture', 32, 32);
@@ -80,7 +80,7 @@ const HostParticlesOverlay = forwardRef<HostParticlesOverlayHandle>(function Hos
         duration: 500,
       });
     },
-  }));
+  }), []);
 
   return (
     <div

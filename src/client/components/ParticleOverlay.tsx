@@ -130,8 +130,8 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       return {
         x: Math.random() * canvas.offsetWidth,
         y: Math.random() * canvas.offsetHeight,
-        vx: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
-        vy: (Math.random() - 0.5) * (speedRange.max - speedRange.min) + speedRange.min,
+        vx: (Math.random() - 0.5) * 2 * speedRange.max,
+        vy: (Math.random() - 0.5) * 2 * speedRange.max,
         size: Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min,
         color:
           particleColors[Math.floor(Math.random() * particleColors.length)] ||

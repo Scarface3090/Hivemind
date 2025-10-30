@@ -76,7 +76,7 @@ export const SpectrumSlider = ({
       }
     };
 
-    game.events.once(Phaser.Core.Events.STEP, wireSceneEvents);
+    game.events.once(Phaser.Core.Events.POST_STEP, wireSceneEvents);
 
     return () => {
       try {

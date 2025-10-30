@@ -116,6 +116,12 @@ export class GuessingScene extends Phaser.Scene {
         if (gameObject !== this.handle) return;
         this.isDragging = true;
 
+        // If a previous trail exists, destroy it before creating a new one
+        if (this.trailEffectId) {
+          this.particleManager.destroyEffect(this.trailEffectId);
+          this.trailEffectId = null;
+        }
+
         // Create brush stroke trail effect
         this.trailEffectId = this.particleManager.createBrushStrokeTrail(
           this.handle.x,
@@ -160,6 +166,12 @@ export class GuessingScene extends Phaser.Scene {
         if (gameObject !== this.handle) return;
         this.isDragging = false;
 
+        // Destroy and clear trail effect on release to avoid leaks
+        if (this.trailEffectId) {
+          this.particleManager.destroyEffect(this.trailEffectId);
+          this.trailEffectId = null;
+        }
+
         // Create organic burst effect on release
         this.particleManager.createOrganicBurst(this.handle.x, this.handle.y, {
           colors: [colors.particles.primary, colors.particles.tertiary],
@@ -190,6 +202,8 @@ export class GuessingScene extends Phaser.Scene {
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!pointer.isDown) return;
+      // Skip pointermove logic if handle is being dragged - handle drag events will handle it
+      if (this.isDragging) return;
       const { left, right } = this.track.getBounds();
       const clampedX = Phaser.Math.Clamp(pointer.x, left, right);
       this.handle.setX(clampedX);

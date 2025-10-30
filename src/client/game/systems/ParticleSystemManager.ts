@@ -39,6 +39,24 @@ export class ParticleSystemManager {
   private performanceMonitor: PerformanceMonitor;
   private deviceTier: 'high' | 'medium' | 'low' = 'high';
   private maxParticles: number;
+  
+  private validateTexture(): boolean {
+    const exists = this.scene.textures.exists('particle-texture');
+    if (!exists) {
+      console.error('ParticleSystemManager: particle-texture not found.');
+      return false;
+    }
+    return true;
+  }
+
+  private parseColor(color: string): number {
+    const hex = color.startsWith('#') ? color.slice(1) : color;
+    if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+      console.warn(`ParticleSystemManager: Invalid color "${color}". Falling back to #FFFFFF.`);
+      return 0xFFFFFF;
+    }
+    return parseInt(hex, 16);
+  }
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -103,6 +121,7 @@ export class ParticleSystemManager {
   }
 
   private setQualityLevel(level: 'high' | 'medium' | 'low'): void {
+    if (this.deviceTier === level) return;
     this.deviceTier = level;
     this.maxParticles = this.getMaxParticlesForDevice();
 
@@ -114,15 +133,33 @@ export class ParticleSystemManager {
 
   private adjustEmitterForPerformance(emitter: Phaser.GameObjects.Particles.ParticleEmitter): void {
     const reductionFactor = this.deviceTier === 'low' ? 0.3 : this.deviceTier === 'medium' ? 0.6 : 1.0;
-    
-    // Reduce particle count based on device tier
-    if (emitter.maxParticles) {
-      emitter.maxParticles = Math.floor(emitter.maxParticles * reductionFactor);
+
+    // Cache original baseline values once to avoid compounding adjustments
+    const anyEmitter = emitter as unknown as {
+      __hvmOriginalMaxParticles?: number;
+      __hvmOriginalFrequency?: number;
+    };
+
+    if (anyEmitter.__hvmOriginalMaxParticles === undefined && typeof emitter.maxParticles === 'number') {
+      anyEmitter.__hvmOriginalMaxParticles = emitter.maxParticles;
     }
-    
-    // Adjust frequency for lower-end devices
-    if (emitter.frequency > 0) {
-      emitter.frequency = emitter.frequency / reductionFactor;
+    if (anyEmitter.__hvmOriginalFrequency === undefined && typeof emitter.frequency === 'number') {
+      anyEmitter.__hvmOriginalFrequency = emitter.frequency;
+    }
+
+    // Apply new values derived from baselines
+    if (typeof anyEmitter.__hvmOriginalMaxParticles === 'number') {
+      const newMax = Math.floor(anyEmitter.__hvmOriginalMaxParticles * reductionFactor);
+      if (Number.isFinite(newMax) && newMax > 0) {
+        emitter.maxParticles = newMax;
+      }
+    }
+
+    if (typeof anyEmitter.__hvmOriginalFrequency === 'number' && anyEmitter.__hvmOriginalFrequency > 0) {
+      const newFreq = anyEmitter.__hvmOriginalFrequency * reductionFactor; // multiply so lower tier reduces emission rate
+      if (Number.isFinite(newFreq) && newFreq >= 0) {
+        emitter.frequency = newFreq;
+      }
     }
   }
 
@@ -165,7 +202,7 @@ export class ParticleSystemManager {
       scale: { start: finalConfig.size.max / 10, end: finalConfig.size.min / 10 },
       alpha: { start: finalConfig.opacity.max, end: finalConfig.opacity.min },
       lifespan: finalConfig.duration || 800,
-      tint: finalConfig.colors.map((color) => parseInt(color.replace('#', ''), 16)),
+      tint: finalConfig.colors.map((c) => this.parseColor(c)),
       gravityY: (finalConfig.physics?.gravity || 0) * 100,
       frequency: 50,
       maxParticles: finalConfig.count,
@@ -200,19 +237,14 @@ export class ParticleSystemManager {
     };
 
     // Validate that particle texture is loaded before creating particles
-    if (!this.scene.textures.exists('particle-texture')) {
-      console.error(
-        'ParticleSystemManager: particle-texture not found. Cannot create organic burst effect.'
-      );
-      return effectId;
-    }
+    if (!this.validateTexture()) return effectId;
 
     const emitter = this.scene.add.particles(x, y, 'particle-texture', {
       speed: { min: finalConfig.speed.min, max: finalConfig.speed.max },
       scale: { start: finalConfig.size.max / 10, end: finalConfig.size.min / 10 },
       alpha: { start: finalConfig.opacity.max, end: 0 },
       lifespan: finalConfig.duration || 600,
-      tint: finalConfig.colors.map((color) => parseInt(color.replace('#', ''), 16)),
+      tint: finalConfig.colors.map((c) => this.parseColor(c)),
       gravityY: (finalConfig.physics?.gravity || 0) * 100,
       quantity: finalConfig.count,
       maxParticles: finalConfig.count,
@@ -252,19 +284,14 @@ export class ParticleSystemManager {
     };
 
     // Validate that particle texture is loaded before creating particles
-    if (!this.scene.textures.exists('particle-texture')) {
-      console.error(
-        'ParticleSystemManager: particle-texture not found. Cannot create ambient particles.'
-      );
-      return effectId;
-    }
+    if (!this.validateTexture()) return effectId;
 
     const emitter = this.scene.add.particles(bounds.centerX, bounds.centerY, 'particle-texture', {
       speed: { min: finalConfig.speed.min, max: finalConfig.speed.max },
       scale: { min: finalConfig.size.min / 10, max: finalConfig.size.max / 10 },
       alpha: { min: finalConfig.opacity.min, max: finalConfig.opacity.max },
       lifespan: { min: 3000, max: 6000 },
-      tint: finalConfig.colors.map((color) => parseInt(color.replace('#', ''), 16)),
+      tint: finalConfig.colors.map((c) => this.parseColor(c)),
       gravityY: (finalConfig.physics?.gravity || 0) * 100,
       frequency: 200,
       maxParticles: finalConfig.count,

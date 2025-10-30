@@ -39,15 +39,21 @@ Object.defineProperty(global, 'cancelAnimationFrame', {
 });
 
 // Mock Phaser
+const mockEmitters: any[] = [];
+
 const mockScene = {
   add: {
-    particles: vi.fn().mockReturnValue({
-      destroy: vi.fn(),
-      maxParticles: 50,
-      frequency: 100,
-      explode: vi.fn(),
-      setPosition: vi.fn(),
-      getAliveParticleCount: vi.fn().mockReturnValue(10)
+    particles: vi.fn().mockImplementation(() => {
+      const emitter = {
+        destroy: vi.fn(),
+        maxParticles: 50,
+        frequency: 100,
+        explode: vi.fn(),
+        setPosition: vi.fn(),
+        getAliveParticleCount: vi.fn().mockReturnValue(10)
+      };
+      mockEmitters.push(emitter);
+      return emitter;
     })
   },
   time: {
@@ -158,17 +164,17 @@ describe('ParticleSystemManager', () => {
 
   it('should update trail position', () => {
     const effectId = particleManager.createBrushStrokeTrail(100, 200);
-    const mockEmitter = mockScene.add.particles();
-    
+    const mockEmitter = mockEmitters[mockEmitters.length - 1];
+
+    // Simulate updating the trail position
     particleManager.updateTrailPosition(effectId, 150, 250);
-    
+
     expect(mockEmitter.setPosition).toHaveBeenCalledWith(150, 250);
   });
 
   it('should destroy effects', () => {
     const effectId = particleManager.createBrushStrokeTrail(100, 200);
-    const mockEmitter = mockScene.add.particles();
-    
+    const mockEmitter = mockEmitters[mockEmitters.length - 1];
     particleManager.destroyEffect(effectId);
     
     expect(mockEmitter.destroy).toHaveBeenCalled();

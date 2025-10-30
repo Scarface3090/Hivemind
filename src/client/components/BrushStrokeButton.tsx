@@ -84,9 +84,10 @@ export const BrushStrokeButton: React.FC<BrushStrokeButtonProps> = ({
       if (!disabled && (e.key === ' ' || e.key === 'Enter')) {
         if (e.key === ' ') e.preventDefault();
         setIsPressed(true);
+        handleClick();
       }
     },
-    [disabled]
+    [disabled, handleClick]
   );
 
   const handleKeyUp = useCallback((e: React.KeyboardEvent) => {

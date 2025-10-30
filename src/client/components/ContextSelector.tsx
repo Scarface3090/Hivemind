@@ -43,13 +43,13 @@ export const ContextSelector = ({
         </div>
         <div className="context-selector__grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="difficulty-option difficulty-option--loading" aria-hidden="true">
-              <div className="difficulty-option__content">
-                <div className="difficulty-option__header">
-                  <div className="difficulty-option__name difficulty-option__name--skeleton"></div>
+            <div key={i} className="context-option context-option--loading" aria-hidden="true">
+              <div className="context-option__content">
+                <div className="context-option__header">
+                  <div className="context-option__name context-option__name--skeleton"></div>
                 </div>
-                <div className="difficulty-option__description difficulty-option__description--skeleton"></div>
-                <div className="difficulty-option__count difficulty-option__count--skeleton"></div>
+                <div className="context-option__description context-option__description--skeleton"></div>
+                <div className="context-option__count context-option__count--skeleton"></div>
               </div>
             </div>
           ))}
@@ -97,9 +97,9 @@ export const ContextSelector = ({
             <button
               key={contextSummary.context}
               type="button"
-              className={`difficulty-option ${
-                isSelected ? 'difficulty-option--selected' : ''
-              } ${isDisabled ? 'difficulty-option--disabled' : ''} transition-colors transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md rounded-2xl border-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-400 brush-stroke`}
+              className={`context-option ${
+                isSelected ? 'context-option--selected' : ''
+              } ${isDisabled ? 'context-option--disabled' : ''} transition-colors transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md rounded-2xl border-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-400 brush-stroke`}
               onClick={() => {
                 if (!isDisabled) {
                   onContextSelect(contextSummary.context);
@@ -108,17 +108,17 @@ export const ContextSelector = ({
               disabled={isDisabled}
               aria-pressed={isSelected}
             >
-              <div className="difficulty-option__content">
-                <div className="difficulty-option__header">
-                  <h3 className="difficulty-option__name">{contextSummary.context}</h3>
+              <div className="context-option__content">
+                <div className="context-option__header">
+                  <h3 className="context-option__name">{contextSummary.context}</h3>
                 </div>
-                <div className="difficulty-option__count">
-                  <span className="difficulty-option__count-text">
+                <div className="context-option__count">
+                  <span className="context-option__count-text">
                     {contextSummary.totalCount} spectrum{contextSummary.totalCount === 1 ? '' : 's'}
                   </span>
                 </div>
               </div>
-              <div className="difficulty-option__indicator" aria-hidden="true">
+              <div className="context-option__indicator" aria-hidden="true">
                 {isSelected ? '✓' : ''}
               </div>
             </button>

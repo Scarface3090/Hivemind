@@ -91,7 +91,7 @@ export const getSpacing = (size: keyof typeof spacing): string => {
   return spacing[size];
 };
 
-export const getComponent = (component: keyof typeof components): any => {
+export const getComponent = <T extends keyof typeof components>(component: T): typeof components[T] => {
   return components[component];
 };
 

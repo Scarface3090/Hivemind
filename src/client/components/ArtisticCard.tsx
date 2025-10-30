@@ -28,7 +28,7 @@ export const ArtisticCard: React.FC<ArtisticCardProps> = ({
           background: `linear-gradient(135deg, ${colors.interactive.host} 0%, ${colors.interactive.hostHover} 100%)`,
           border: `3px solid ${colors.text.primary}`,
           color: colors.text.onDark,
-          transform: `rotate(${rotation ?? -1}deg)`,
+          transform: `rotate(${rotation || -1}deg)`,
           boxShadow: `4px 4px 0px ${colors.text.primary}, ${shadows.lg}`,
         };
       case 'accolade':
@@ -36,7 +36,7 @@ export const ArtisticCard: React.FC<ArtisticCardProps> = ({
           background: `linear-gradient(135deg, ${colors.brushStrokes.yellow} 0%, ${colors.brushStrokes.orange} 100%)`,
           border: `3px solid ${colors.text.primary}`,
           color: colors.text.primary,
-          transform: `rotate(${rotation ?? 2}deg)`,
+          transform: `rotate(${rotation || 2}deg)`,
           boxShadow: `4px 4px 0px ${colors.text.primary}, ${shadows.lg}`,
         };
       default:
