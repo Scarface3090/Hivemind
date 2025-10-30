@@ -3,6 +3,7 @@ import type { InitResponse, IncrementResponse, DecrementResponse } from '../shar
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { contentRefreshRouter, gameRouter, contextRouter, devRouter } from './core/routes/index.js';
+import { loadSpectraFromAssets } from './core/services/content.service.js';
 // Removed bootstrapServer import; avoid using Redis/Settings before a request context
 
 const app = express();
@@ -157,32 +158,14 @@ server.on('error', (err) => console.error(`server error; ${err.stack}`));
 server.listen(port, () => {
   console.log(`http://localhost:${port}`);
   console.log('Server started. Content cache will initialize on-demand.');
-  
-  // Best-effort warmup: trigger content refresh inside a request context
-  // Uses fetch (no http/https modules) and retries with backoff; non-blocking
+
+  // Best-effort warmup without external HTTP calls and without Redis (no request context yet)
   (async () => {
-    const baseUrl = `http://localhost:${port}`;
-    const url = `${baseUrl}/internal/scheduler/content-refresh`;
-    const maxAttempts = 5;
-    let attempt = 0;
-    while (attempt < maxAttempts) {
-      attempt++;
-      try {
-        const res = await fetch(url, { method: 'POST' });
-        if (res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.log(`[Warmup] Content refresh ok (attempt ${attempt})`, body);
-          break;
-        } else {
-          const text = await res.text().catch(() => '');
-          console.warn(`[Warmup] Content refresh failed (attempt ${attempt}) ${res.status} ${res.statusText} ${text}`);
-        }
-      } catch (err) {
-        console.warn(`[Warmup] Content refresh error (attempt ${attempt})`, err);
-      }
-      // Exponential backoff: 500ms, 1s, 2s, 4s, 8s
-      const delayMs = 500 * Math.pow(2, attempt - 1);
-      await new Promise((r) => setTimeout(r, delayMs));
+    try {
+      const spectra = await loadSpectraFromAssets();
+      console.log(`[Warmup] Parsed embedded spectra: ${spectra.length}`);
+    } catch (e) {
+      console.warn('[Warmup] Failed to parse embedded spectra; will initialize on-demand', e);
     }
   })().catch((e) => console.warn('[Warmup] Unexpected warmup error', e));
 });
