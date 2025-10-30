@@ -156,7 +156,9 @@ export class ParticleSystemManager {
     }
 
     if (typeof anyEmitter.__hvmOriginalFrequency === 'number' && anyEmitter.__hvmOriginalFrequency > 0) {
-      const newFreq = anyEmitter.__hvmOriginalFrequency * reductionFactor; // multiply so lower tier reduces emission rate
+      // In Phaser, lower frequency value = more frequent emissions (shorter interval).
+      // To reduce emissions on lower tiers, increase the interval by dividing by the reduction factor.
+      const newFreq = anyEmitter.__hvmOriginalFrequency / reductionFactor;
       if (Number.isFinite(newFreq) && newFreq >= 0) {
         emitter.frequency = newFreq;
       }
@@ -210,6 +212,19 @@ export class ParticleSystemManager {
 
     this.particleEmitters.set(effectId, emitter);
 
+    // Initialize original baselines and apply performance adjustment immediately
+    const anyEmitter = emitter as unknown as {
+      __hvmOriginalMaxParticles?: number;
+      __hvmOriginalFrequency?: number;
+    };
+    if (anyEmitter.__hvmOriginalMaxParticles === undefined && typeof emitter.maxParticles === 'number') {
+      anyEmitter.__hvmOriginalMaxParticles = emitter.maxParticles;
+    }
+    if (anyEmitter.__hvmOriginalFrequency === undefined && typeof emitter.frequency === 'number') {
+      anyEmitter.__hvmOriginalFrequency = emitter.frequency;
+    }
+    this.adjustEmitterForPerformance(emitter);
+
     // Auto-cleanup after duration
     this.scene.time.delayedCall((finalConfig.duration || 800) + 1000, () => {
       this.destroyEffect(effectId);
@@ -255,6 +270,19 @@ export class ParticleSystemManager {
 
     this.particleEmitters.set(effectId, emitter);
 
+    // Initialize original baselines (frequency may be undefined for bursts) and adjust
+    const anyEmitter = emitter as unknown as {
+      __hvmOriginalMaxParticles?: number;
+      __hvmOriginalFrequency?: number;
+    };
+    if (anyEmitter.__hvmOriginalMaxParticles === undefined && typeof emitter.maxParticles === 'number') {
+      anyEmitter.__hvmOriginalMaxParticles = emitter.maxParticles;
+    }
+    if (anyEmitter.__hvmOriginalFrequency === undefined && typeof emitter.frequency === 'number') {
+      anyEmitter.__hvmOriginalFrequency = emitter.frequency;
+    }
+    this.adjustEmitterForPerformance(emitter);
+
     // Auto-cleanup after duration
     this.scene.time.delayedCall((finalConfig.duration || 600) + 1000, () => {
       this.destroyEffect(effectId);
@@ -298,6 +326,18 @@ export class ParticleSystemManager {
     });
 
     this.particleEmitters.set(effectId, emitter);
+    // Initialize baselines and apply performance adjustment immediately
+    const anyEmitter = emitter as unknown as {
+      __hvmOriginalMaxParticles?: number;
+      __hvmOriginalFrequency?: number;
+    };
+    if (anyEmitter.__hvmOriginalMaxParticles === undefined && typeof emitter.maxParticles === 'number') {
+      anyEmitter.__hvmOriginalMaxParticles = emitter.maxParticles;
+    }
+    if (anyEmitter.__hvmOriginalFrequency === undefined && typeof emitter.frequency === 'number') {
+      anyEmitter.__hvmOriginalFrequency = emitter.frequency;
+    }
+    this.adjustEmitterForPerformance(emitter);
     return effectId;
   }
 

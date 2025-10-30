@@ -23,11 +23,18 @@ export const SpectrumSlider = ({
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const onChangeRef = useRef(onValueChange);
+  const sceneCleanupRef = useRef<(() => void) | null>(null);
+  const latestMedianRef = useRef<number | null | undefined>(median);
 
   // Keep the latest callback without retriggering game creation
   useEffect(() => {
     onChangeRef.current = onValueChange;
   }, [onValueChange]);
+
+  // Track latest median for late-binding scene
+  useEffect(() => {
+    latestMedianRef.current = median;
+  }, [median]);
 
   useEffect(() => {
     const mountTarget = canvasRef.current;
@@ -40,7 +47,7 @@ export const SpectrumSlider = ({
       if (!game.scene.isActive('GuessingScene')) {
         game.scene.start('GuessingScene', {
           initialValue: value,
-          median: median,
+          median: latestMedianRef.current ?? null,
           leftLabel: spectrum.leftLabel,
           rightLabel: spectrum.rightLabel,
         });
@@ -64,11 +71,18 @@ export const SpectrumSlider = ({
             onChangeRef.current(newValue);
           };
           scene.events.on('slider:valueChanged', handler);
-          scene.setMedian?.(median ?? null);
+          scene.setMedian?.(latestMedianRef.current ?? null);
           scene.setLabels?.(spectrum.leftLabel, spectrum.rightLabel);
-          cleanup = () => {
+          const off = () => {
             scene.events?.off?.('slider:valueChanged', handler);
           };
+          cleanup = off;
+          sceneCleanupRef.current = off;
+
+          // Ensure cleanup on scene shutdown (navigation/unmount)
+          scene.events?.once?.('shutdown', () => {
+            off();
+          });
         }
       } catch {
         // Scene may not yet exist; try again after the next frame
@@ -80,21 +94,24 @@ export const SpectrumSlider = ({
 
     return () => {
       try {
+        // Ensure any scene-level listener cleanup runs
+        sceneCleanupRef.current?.();
+        sceneCleanupRef.current = null;
         cleanup?.();
       } finally {
         // Destroy the Phaser game and remove the canvas element entirely
-        game.destroy(true);
-
+        if (!game.isDestroyed) {
+          game.destroy(true);
+        }
         if (mountTarget.contains(game.canvas)) {
           mountTarget.removeChild(game.canvas);
         }
-
         gameRef.current = null;
       }
     };
   }, [spectrum.leftLabel, spectrum.rightLabel]);
 
-  // Update median in scene when it changes
+  // Update median in scene when it changes (robust to scene readiness)
   useEffect(() => {
     const game = gameRef.current;
     if (!game) return;
@@ -104,7 +121,7 @@ export const SpectrumSlider = ({
         const scene = game.scene.getScene('GuessingScene') as Phaser.Scene & {
           setMedian?: (value: number | null) => void;
         };
-        scene?.setMedian?.(median ?? null);
+        scene?.setMedian?.(latestMedianRef.current ?? null);
       } catch {
         game.events.once(Phaser.Core.Events.POST_STEP, applyMedian);
       }

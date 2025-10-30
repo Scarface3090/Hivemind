@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { colors, particles, performance } from '../../shared/design-tokens.js';
 
 interface ParticleSystem {
@@ -28,6 +28,25 @@ interface ParticleOverlayProps {
   performance?: 'high' | 'medium' | 'low';
 }
 
+export interface ParticleBurstOptions {
+  // Center of burst, default: center of canvas
+  x?: number;
+  y?: number;
+  // Number of burst particles in addition to ambient ones
+  count?: number;
+  // Lifetime in ms
+  durationMs?: number;
+  // Velocity scalar in px/s
+  velocity?: number;
+  // Optional preset name for colors/shape
+  preset?: 'submit' | 'streak' | 'splat';
+  colors?: string[];
+}
+
+export interface ParticleOverlayHandle {
+  burst: (opts?: ParticleBurstOptions) => void;
+}
+
 interface Particle {
   x: number;
   y: number;
@@ -42,18 +61,21 @@ interface Particle {
   maxLife: number;
   // Number of frames to fade in from 0 to initialOpacity after spawn/reset
   fadeIn: number;
+  shape?: 'circle' | 'ellipse' | 'streak';
 }
 
-export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
+export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlayProps>(({ 
   particleCount = 8,
   colors: providedColors,
   className = '',
   effectType = 'ambient',
   performance: performanceLevel = 'high',
-}) => {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
+  const burstsRef = useRef<Particle[]>([]);
+  const burstMetaRef = useRef<{ createdAt: number; durationMs: number } | null>(null);
   const particleColors = useMemo(() => {
     if (providedColors) return providedColors;
 
@@ -185,23 +207,46 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       });
     };
 
+    const updateBurstParticles = () => {
+      if (!burstMetaRef.current) return;
+      const now = performance.now();
+      const elapsed = now - burstMetaRef.current.createdAt;
+      const duration = burstMetaRef.current.durationMs;
+      const t = Math.min(1, Math.max(0, elapsed / duration));
+
+      // Ease-out fade for burst particles
+      burstsRef.current.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+        const remaining = 1 - t;
+        p.opacity = p.initialOpacity * Math.max(0, remaining);
+      });
+
+      if (t >= 1) {
+        burstsRef.current = [];
+        burstMetaRef.current = null;
+      }
+    };
+
     const drawParticles = () => {
       ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
 
-      particlesRef.current.forEach((particle) => {
+      const drawOne = (particle: Particle, isBrush: boolean) => {
         ctx.save();
         ctx.globalAlpha = particle.opacity;
         ctx.fillStyle = particle.color;
 
-        if (effectType === 'brushStroke') {
+        const shape = particle.shape ?? (isBrush ? 'ellipse' : 'circle');
+        if (shape === 'ellipse' || shape === 'streak') {
           // Draw organic brush stroke shape
           ctx.beginPath();
           ctx.ellipse(
             particle.x,
             particle.y,
-            particle.size,
-            particle.size * 0.7,
-            particle.rotation,
+            shape === 'streak' ? particle.size * 1.4 : particle.size,
+            shape === 'streak' ? particle.size * 0.45 : particle.size * 0.7,
+            particle.rotation + (shape === 'streak' ? 0.2 : 0),
             0,
             Math.PI * 2
           );
@@ -214,11 +259,16 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
         }
 
         ctx.restore();
-      });
+      };
+
+      const isBrush = effectType === 'brushStroke';
+      particlesRef.current.forEach((particle) => drawOne(particle, isBrush));
+      burstsRef.current.forEach((particle) => drawOne(particle, isBrush));
     };
 
     const animate = () => {
       updateParticles();
+      updateBurstParticles();
       drawParticles();
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -237,6 +287,74 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
     };
   }, [adjustedParticleCount, particleColors, effectType]);
 
+  useImperativeHandle(ref, () => ({
+    burst: (opts?: ParticleBurstOptions) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const cx = opts?.x ?? rect.width / 2;
+      const cy = opts?.y ?? rect.height / 2;
+      const count = Math.max(8, Math.min(64, opts?.count ?? 24));
+      const durationMs = Math.max(200, Math.min(1500, opts?.durationMs ?? 650));
+      const velocity = Math.max(60, Math.min(600, opts?.velocity ?? 220));
+
+      let burstColors: string[] | undefined = opts?.colors;
+      if (!burstColors) {
+        switch (opts?.preset) {
+          case 'submit':
+            burstColors = [colors.particles.primary, colors.particles.accent, colors.particles.secondary];
+            break;
+          case 'streak':
+            burstColors = [colors.particles.secondary, colors.particles.tertiary];
+            break;
+          case 'splat':
+            burstColors = [colors.particles.accent];
+            break;
+          default:
+            burstColors = particleColors;
+        }
+      }
+
+      const mk = (): Particle => {
+        const angle = Math.random() * Math.PI * 2;
+        const speedPxPerFrame = (velocity / 1000) * (1 + Math.random() * 0.6); // px/ms scaled per frame time approximation
+        const size = 8 + Math.random() * 10;
+        let shape: 'circle' | 'ellipse' | 'streak' | undefined;
+        switch (opts?.preset) {
+          case 'streak':
+            shape = 'streak';
+            break;
+          case 'splat':
+            shape = Math.random() < 0.6 ? 'circle' : 'ellipse';
+            break;
+          case 'submit':
+            shape = 'ellipse';
+            break;
+          default:
+            shape = undefined;
+        }
+        return {
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speedPxPerFrame,
+          vy: Math.sin(angle) * speedPxPerFrame,
+          size,
+          color: burstColors![Math.floor(Math.random() * burstColors!.length)],
+          opacity: 1,
+          initialOpacity: 1,
+          rotation: Math.random() * Math.PI,
+          life: 0,
+          maxLife: durationMs / 16,
+          fadeIn: 0,
+          shape,
+        };
+      };
+
+      burstsRef.current = Array.from({ length: count }, mk);
+      burstMetaRef.current = { createdAt: performance.now(), durationMs };
+    },
+  }), [particleColors]);
+
   return (
     <canvas
       ref={canvasRef}
@@ -252,6 +370,6 @@ export const ParticleOverlay: React.FC<ParticleOverlayProps> = ({
       }}
     />
   );
-};
+});
 
 export default ParticleOverlay;

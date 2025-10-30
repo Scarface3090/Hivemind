@@ -2,6 +2,18 @@ import * as Phaser from 'phaser';
 import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ParticleSystemManager } from '../systems/ParticleSystemManager.js';
 import { colors } from '../../../shared/design-tokens.js';
+import { getSpectrumColors, lerpColor, jitter } from '../../../shared/utils/spectrumColors.js';
+/**
+ * Artistic Enhancements:
+ * - Painterly gradient track using spectrum-derived colors (multi-pass jittered strokes)
+ * - Medium-density particle trail + contextual bursts with spectrum palette
+ * - Organic median visuals: subtle shimmer and near-value pulse tween
+ * - Touch UX: larger hit area and short momentum easing glide on release
+ *
+ * Performance:
+ * - Adaptive draw density based on track width and devicePixelRatio
+ * - Effects are lightweight; counts tuned for mid-range mobile targets
+ */
 
 type GuessingSceneData = {
   initialValue?: number;
@@ -19,6 +31,12 @@ export class GuessingScene extends Phaser.Scene {
   private leftLabelText!: Phaser.GameObjects.Text;
   private rightLabelText!: Phaser.GameObjects.Text;
   private spectrumBar!: Phaser.GameObjects.Graphics;
+  private spectrumColorLeft: number | null = null;
+  private spectrumColorRight: number | null = null;
+  private spectrumCacheWidth: number | null = null;
+  private spectrumCacheHeight: number | null = null;
+  private spectrumCacheLeft: number | null = null;
+  private spectrumCacheRight: number | null = null;
 
   private currentValue: number = 50;
   private currentMedian: number | null = null;
@@ -30,6 +48,13 @@ export class GuessingScene extends Phaser.Scene {
   private trailEffectId: string | null = null;
   private ambientEffectId: string | null = null;
   private isDragging: boolean = false;
+  private medianPulseTween: Phaser.Tweens.Tween | null = null;
+  private medianTimeline: Phaser.Tweens.Timeline | null = null;
+  private medianAnimatedX: number | null = null;
+  private jitterAmp: number = 0;
+  private isEmittingInternal: boolean = false;
+  private lastDragVX: number = 0;
+  private prevDragX: number | null = null;
 
   constructor() {
     super('GuessingScene');
@@ -40,6 +65,11 @@ export class GuessingScene extends Phaser.Scene {
     if (typeof data.median === 'number') this.currentMedian = data.median;
     if (typeof data.leftLabel === 'string') this.leftLabel = data.leftLabel;
     if (typeof data.rightLabel === 'string') this.rightLabel = data.rightLabel;
+    if (this.leftLabel && this.rightLabel) {
+      const [l, r] = getSpectrumColors(this.leftLabel, this.rightLabel);
+      this.spectrumColorLeft = l;
+      this.spectrumColorRight = r;
+    }
   }
 
   create(): void {
@@ -57,7 +87,12 @@ export class GuessingScene extends Phaser.Scene {
     // Slider handle
     this.handle = this.add
       .arc(0, 0, 14, 0, 360, false, 0xffcc00)
-      .setInteractive({ useHandCursor: true, draggable: true });
+      .setInteractive({
+        useHandCursor: true,
+        draggable: true,
+        hitArea: new Phaser.Geom.Circle(0, 0, 24),
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+      });
 
     // Median indicator
     this.medianLine = this.add.rectangle(0, 0, 2, 28, 0x00e5ff, 1).setOrigin(0.5, 0.5);
@@ -122,14 +157,16 @@ export class GuessingScene extends Phaser.Scene {
           this.trailEffectId = null;
         }
 
-        // Create brush stroke trail effect
+        // Create brush stroke trail effect (medium density) using spectrum colors
+        const trailLeft = this.spectrumColorLeft ?? colors.particles.primary;
+        const trailRight = this.spectrumColorRight ?? colors.particles.secondary;
         this.trailEffectId = this.particleManager.createBrushStrokeTrail(
           this.handle.x,
           this.handle.y,
           {
-            colors: [colors.particles.primary, colors.particles.secondary],
-            count: 8,
-            duration: 800,
+            colors: [trailLeft, trailRight],
+            count: 16,
+            duration: 900,
           }
         );
       }
@@ -149,6 +186,14 @@ export class GuessingScene extends Phaser.Scene {
         this.currentValue = this.positionToValue(clampedX, left, right);
         this.valueText.setText(`${this.currentValue}`);
 
+        // simple velocity estimation for momentum easing
+        if (this.prevDragX == null) {
+          this.prevDragX = clampedX;
+        } else {
+          this.lastDragVX = clampedX - this.prevDragX;
+          this.prevDragX = clampedX;
+        }
+
         // Update particle trail position
         if (this.trailEffectId && this.isDragging) {
           this.particleManager.updateTrailPosition(this.trailEffectId, clampedX, this.handle.y);
@@ -165,6 +210,7 @@ export class GuessingScene extends Phaser.Scene {
       (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
         if (gameObject !== this.handle) return;
         this.isDragging = false;
+        this.prevDragX = null;
 
         // Destroy and clear trail effect on release to avoid leaks
         if (this.trailEffectId) {
@@ -173,11 +219,35 @@ export class GuessingScene extends Phaser.Scene {
         }
 
         // Create organic burst effect on release
+        const burstLeft = this.spectrumColorLeft ?? colors.particles.primary;
+        const burstRight = this.spectrumColorRight ?? colors.particles.tertiary;
         this.particleManager.createOrganicBurst(this.handle.x, this.handle.y, {
-          colors: [colors.particles.primary, colors.particles.tertiary],
-          count: 15,
+          colors: [burstLeft, burstRight],
+          count: 18,
           duration: 600,
         });
+
+        // Momentum easing: glide a bit based on last velocity
+        const { left, right } = this.track.getBounds();
+        const targetX = Phaser.Math.Clamp(this.handle.x + this.lastDragVX * 6, left, right);
+        if (Math.abs(targetX - this.handle.x) > 1) {
+          const startX = this.handle.x;
+          this.tweens.add({
+            targets: this.handle,
+            x: targetX,
+            duration: 180,
+            ease: 'Quad.easeOut',
+            onUpdate: () => {
+              const v = this.positionToValue(this.handle.x, left, right);
+              this.currentValue = v;
+              this.valueText.setText(`${v}`);
+              this.layout();
+            },
+            onComplete: () => {
+              this.emitValueChanged(this.currentValue);
+            },
+          });
+        }
       }
     );
 
@@ -191,10 +261,12 @@ export class GuessingScene extends Phaser.Scene {
       this.valueText.setText(`${this.currentValue}`);
 
       // Create burst effect on click
+      const clickLeft = this.spectrumColorLeft ?? colors.particles.secondary;
+      const clickRight = this.spectrumColorRight ?? colors.particles.tertiary;
       this.particleManager.createOrganicBurst(clampedX, this.handle.y, {
-        colors: [colors.particles.secondary, colors.particles.tertiary],
-        count: 12,
-        duration: 500,
+        colors: [clickLeft, clickRight],
+        count: 14,
+        duration: 520,
       });
 
       this.layout();
@@ -228,6 +300,28 @@ export class GuessingScene extends Phaser.Scene {
 
     // Set up cleanup when scene shuts down
     this.events.once('shutdown', this.destroy, this);
+
+    // Listen for external value changes (from React wrapper) to provide visual feedback
+    this.events.on('slider:valueChanged', (newValue: number) => {
+      if (this.isEmittingInternal) return; // ignore self-emitted events
+      if (typeof newValue !== 'number') return;
+      if (this.isDragging) return; // don't disturb active drag
+
+      const { left, right } = this.track.getBounds();
+      const x = this.valueToPosition(newValue, left, right);
+      this.currentValue = Phaser.Math.Clamp(newValue, MIN_GUESS_VALUE, MAX_GUESS_VALUE);
+      this.handle.setX(x);
+      this.valueText.setText(`${this.currentValue}`);
+      this.layout();
+
+      const burstLeft = this.spectrumColorLeft ?? colors.particles.secondary;
+      const burstRight = this.spectrumColorRight ?? colors.particles.trail;
+      this.particleManager.createOrganicBurst(x, this.handle.y, {
+        colors: [burstLeft, burstRight],
+        count: 10,
+        duration: 420,
+      });
+    });
   }
 
   public setMedian(median: number | null): void {
@@ -236,19 +330,81 @@ export class GuessingScene extends Phaser.Scene {
     this.medianText.setText(median == null ? '—' : `${median}`);
 
     // Create particle effect when median changes
-    if (previousMedian !== null && median !== null && previousMedian !== median) {
-      const { left, right } = this.track.getBounds();
-      const medianX = this.valueToPosition(median, left, right);
+    const { left, right } = this.track.getBounds();
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      this.particleManager.createOrganicBurst(medianX, this.track.y, {
+    if (previousMedian !== null && median !== null && previousMedian !== median) {
+      const prevX = this.medianAnimatedX ?? this.valueToPosition(previousMedian, left, right);
+      const targetX = this.valueToPosition(median, left, right);
+      const delta = targetX - prevX;
+      const absDelta = Math.abs(delta);
+      const sign = delta === 0 ? 1 : delta / absDelta;
+
+      // celebratory micro burst at target
+      this.particleManager.createOrganicBurst(targetX, this.track.y, {
         colors: [colors.particles.tertiary, colors.particles.trail],
         count: 10,
         duration: 400,
         size: { min: 4, max: 8 },
       });
+
+      // Cancel existing animation
+      if (this.medianTimeline) {
+        this.medianTimeline.stop();
+        this.medianTimeline = null;
+      }
+
+      const overshoot = reducedMotion ? 0 : Math.min(12, Math.max(4, absDelta * 0.08));
+      const o1 = targetX + sign * overshoot;
+      const o2 = targetX - sign * overshoot * 0.4;
+      const durationTotal = reducedMotion ? 240 : Phaser.Math.Clamp(600 + Math.min(300, absDelta * 4), 600, 900);
+      const d1 = reducedMotion ? durationTotal : Math.round(durationTotal * 0.45);
+      const d2 = reducedMotion ? 0 : Math.round(durationTotal * 0.28);
+      const d3 = reducedMotion ? 0 : Math.max(150, durationTotal - d1 - d2);
+
+      const driver = { x: prevX } as { x: number };
+      const apply = () => {
+        this.medianAnimatedX = driver.x;
+        // Position immediately based on animated X
+        const sliderY = this.track.y;
+        this.medianLine.setVisible(true).setPosition(this.medianAnimatedX, sliderY).setDisplaySize(2, 28);
+        this.medianText.setVisible(true).setPosition(this.medianAnimatedX, sliderY + 20);
+      };
+
+      // enable subtle jitter implying flowing guesses
+      this.jitterAmp = reducedMotion ? 0 : 0.5;
+
+      if (reducedMotion) {
+        this.tweens.add({
+          targets: driver,
+          x: targetX,
+          duration: d1,
+          ease: 'Quad.easeOut',
+          onUpdate: apply,
+          onComplete: () => {
+            this.medianAnimatedX = targetX;
+            this.jitterAmp = 0;
+          },
+        });
+      } else {
+        const tl = this.tweens.createTimeline();
+        tl.add({ targets: driver, x: o1, duration: d1, ease: 'Cubic.easeOut', onUpdate: apply });
+        if (d2 > 0) tl.add({ targets: driver, x: o2, duration: d2, ease: 'Sine.easeInOut', onUpdate: apply });
+        if (d3 > 0) tl.add({ targets: driver, x: targetX, duration: d3, ease: 'Sine.easeOut', onUpdate: apply });
+        tl.setCallback('onComplete', () => {
+          this.medianAnimatedX = targetX;
+          this.jitterAmp = 0;
+        });
+        this.medianTimeline = tl;
+        tl.play();
+      }
+    } else {
+      // No previous or same value: just lay out normally
+      this.medianAnimatedX = null;
+      this.layout();
     }
 
-    this.layout();
+    this.updateMedianVisuals();
   }
 
   public setLabels(left: string, right: string): void {
@@ -256,7 +412,13 @@ export class GuessingScene extends Phaser.Scene {
     this.rightLabel = right ?? '';
     if (this.leftLabelText) this.leftLabelText.setText(this.leftLabel);
     if (this.rightLabelText) this.rightLabelText.setText(this.rightLabel);
+    if (this.leftLabel && this.rightLabel) {
+      const [l, r] = getSpectrumColors(this.leftLabel, this.rightLabel);
+      this.spectrumColorLeft = l;
+      this.spectrumColorRight = r;
+    }
     this.layout();
+    this.updateMedianVisuals();
   }
 
   private valueToPosition(value: number, left: number, right: number): number {
@@ -286,25 +448,60 @@ export class GuessingScene extends Phaser.Scene {
 
     this.cameras.resize(width, height);
 
-    // Render spectrum gradient bar
-    this.spectrumBar.clear();
+    // Render spectrum gradient bar with painterly brush strokes (cached to avoid flicker)
     const left = canvasCenterX - trackWidth / 2;
+    const top = sliderY - trackHeight / 2;
 
-    // Create gradient effect using multiple rectangles
-    const gradientSteps = 50;
-    for (let i = 0; i < gradientSteps; i++) {
-      const t = i / (gradientSteps - 1);
-      const x = left + trackWidth * t;
-      const stepWidth = trackWidth / gradientSteps;
+    const baseLeft = this.spectrumColorLeft ?? 0xff7a1a; // fallback warm
+    const baseRight = this.spectrumColorRight ?? 0x2aa6ff; // fallback cool
 
-      // Interpolate from orange (#FFBF00) to blue (#0079D3)
-      const r = Math.floor(255 * (1 - t) + 0 * t);
-      const g = Math.floor(191 * (1 - t) + 121 * t);
-      const b = Math.floor(0 * (1 - t) + 211 * t);
-      const color = (r << 16) | (g << 8) | b;
+    const needsRedraw =
+      this.spectrumCacheWidth !== trackWidth ||
+      this.spectrumCacheHeight !== trackHeight ||
+      this.spectrumCacheLeft !== baseLeft ||
+      this.spectrumCacheRight !== baseRight;
 
-      this.spectrumBar.fillStyle(color, 0.6);
-      this.spectrumBar.fillRect(x, sliderY - trackHeight / 2, stepWidth, trackHeight);
+    if (needsRedraw) {
+      this.spectrumBar.clear();
+
+      // Adaptive density based on track width and device pixel ratio
+      const dpr = Math.max(1, Math.min(2, (window.devicePixelRatio || 1)));
+      const density = Phaser.Math.Clamp(Math.round((trackWidth / 600) * dpr), 1, 2);
+      const passes = 4 + density * 1; // 5–6 passes
+      const stepsPerPass = 36 + density * 12; // 48–60 steps
+
+      // Deterministic jitter so redraws look stable
+      const seedBase =
+        (trackWidth | 0) ^ ((trackHeight | 0) << 7) ^ ((baseLeft | 0) << 13) ^ ((baseRight | 0) << 19);
+      let seed = seedBase >>> 0;
+      const rand = () => {
+        seed ^= seed << 13;
+        seed ^= seed >>> 17;
+        seed ^= seed << 5;
+        return ((seed >>> 0) % 10000) / 10000; // [0,1)
+      };
+      const dj = (amount: number) => (rand() * 2 - 1) * amount;
+
+      for (let p = 0; p < passes; p++) {
+        const opacity = 0.18 + (p / passes) * 0.12; // subtle layering
+        const yOffset = dj(trackHeight * 0.25);
+        const thickness = Math.max(1, Math.round(trackHeight / 2.5 + dj(1.2)));
+
+        for (let i = 0; i < stepsPerPass; i++) {
+          const t = i / (stepsPerPass - 1);
+          const x = left + trackWidth * t + dj(1.1);
+          const stepWidth = trackWidth / stepsPerPass + dj(0.6);
+          const color = lerpColor(baseLeft, baseRight, t);
+
+          this.spectrumBar.fillStyle(color, opacity);
+          this.spectrumBar.fillRect(x, top + dj(0.4) + yOffset, stepWidth, thickness);
+        }
+      }
+
+      this.spectrumCacheWidth = trackWidth;
+      this.spectrumCacheHeight = trackHeight;
+      this.spectrumCacheLeft = baseLeft;
+      this.spectrumCacheRight = baseRight;
     }
 
     // Set track for hit detection
@@ -320,7 +517,7 @@ export class GuessingScene extends Phaser.Scene {
     const medianX =
       this.currentMedian == null
         ? null
-        : this.valueToPosition(this.currentMedian, trackLeft, trackRight);
+        : (this.medianAnimatedX ?? this.valueToPosition(this.currentMedian, trackLeft, trackRight));
     if (medianX == null) {
       this.medianLine.setVisible(false);
       this.medianText.setVisible(false);
@@ -350,8 +547,59 @@ export class GuessingScene extends Phaser.Scene {
         : Phaser.Math.Clamp(this.currentMedian, MIN_GUESS_VALUE, MAX_GUESS_VALUE);
   }
 
+  private updateMedianVisuals(): void {
+    if (this.currentMedian == null) {
+      if (this.medianPulseTween) {
+        this.medianPulseTween.stop();
+        this.medianPulseTween = null;
+      }
+      return;
+    }
+    const nearThreshold = 3; // epsilon for near-value pulse
+    const isNear = Math.abs((this.currentMedian ?? 0) - this.currentValue) <= nearThreshold;
+
+    if (isNear && !this.medianPulseTween) {
+      this.medianPulseTween = this.tweens.add({
+        targets: this.medianLine,
+        scaleY: { from: 1, to: 1.2 },
+        duration: 420,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    } else if (!isNear && this.medianPulseTween) {
+      this.medianPulseTween.stop();
+      this.medianPulseTween = null;
+      this.medianLine.setScale(1, 1);
+    }
+  }
+
+  update(time: number): void {
+    // Organic shimmer for median line/text
+    if (this.currentMedian != null) {
+      const shimmer = 0.85 + 0.15 * Math.sin(time * 0.003);
+      this.medianLine.setAlpha(shimmer);
+      this.medianText.setAlpha(0.8 + 0.2 * Math.sin(time * 0.0028 + 0.6));
+
+      // Apply subtle, decaying jitter while animating
+      if (this.jitterAmp > 0 && this.medianAnimatedX != null) {
+        const jitter = Math.sin(time * 0.06) * this.jitterAmp;
+        const y = this.track.y;
+        this.medianLine.setPosition(this.medianAnimatedX + jitter, y);
+        this.medianText.setPosition(this.medianAnimatedX + jitter, y + 20);
+        // decay amplitude
+        this.jitterAmp = Math.max(0, this.jitterAmp - 0.005);
+      }
+    }
+  }
+
   private emitValueChanged(value: number): void {
+    this.isEmittingInternal = true;
     this.events.emit('slider:valueChanged', value);
+    // Reset flag next tick
+    this.time.delayedCall(0, () => {
+      this.isEmittingInternal = false;
+    });
   }
 
   private createAmbientParticles(): void {

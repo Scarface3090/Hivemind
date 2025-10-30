@@ -6,6 +6,7 @@ import type { GamePollingResponse, GuessResponse } from '../../../shared/api.js'
 import { DEFAULT_MEDIAN_REFRESH_SECONDS, MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ApiError } from '../../api/client.js';
 import { SpectrumSlider } from '../../components/SpectrumSlider.js';
+import ParticleOverlay, { type ParticleOverlayHandle } from '../../components/ParticleOverlay.js';
 import { useCountdown } from '../../hooks/useCountdown.js';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -14,6 +15,7 @@ const GuessingView = (): JSX.Element => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const currentValueRef = useRef<number>(50);
+  const particlesRef = useRef<ParticleOverlayHandle | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
   const [showJustification, setShowJustification] = useState<boolean>(true);
 
@@ -35,6 +37,88 @@ const GuessingView = (): JSX.Element => {
   const urgent = remainingMs <= 10_000;
   const queryClient = useQueryClient();
 
+  // Organic participant counter animation
+  const [animatedParticipants, setAnimatedParticipants] = useState<number>(0);
+  const participantsAnimRef = useRef<number | null>(null);
+  const lastParticipantsRef = useRef<number>(0);
+
+  // A11y: Debounced ARIA announcement for settled live median
+  const [announcedMedian, setAnnouncedMedian] = useState<number | null>(null);
+  const medianTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    const m = data?.median?.median;
+    if (typeof m !== 'number') {
+      setAnnouncedMedian(null);
+      if (medianTimeoutRef.current) cancelAnimationFrame(medianTimeoutRef.current);
+      return;
+    }
+
+    const reduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delayMs = reduced ? 200 : 900; // allow scene animation to settle before announcing
+    const start = performance.now();
+
+    const step = () => {
+      const elapsed = performance.now() - start;
+      if (elapsed >= delayMs) {
+        setAnnouncedMedian(m);
+        medianTimeoutRef.current = null;
+        return;
+      }
+      medianTimeoutRef.current = requestAnimationFrame(step);
+    };
+
+    if (medianTimeoutRef.current) cancelAnimationFrame(medianTimeoutRef.current);
+    medianTimeoutRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (medianTimeoutRef.current) cancelAnimationFrame(medianTimeoutRef.current);
+      medianTimeoutRef.current = null;
+    };
+  }, [data?.median?.median]);
+
+  useEffect(() => {
+    const target = data?.game.totalParticipants ?? 0;
+    const start = lastParticipantsRef.current;
+    lastParticipantsRef.current = target;
+
+    if (start === target) {
+      setAnimatedParticipants(target);
+      return;
+    }
+
+    const reduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      setAnimatedParticipants(target);
+      return;
+    }
+
+    const duration = Math.min(500, Math.max(200, Math.abs(target - start) * 30));
+    const startTs = performance.now();
+
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = () => {
+      const now = performance.now();
+      const t = Math.min(1, (now - startTs) / duration);
+      const eased = easeOutCubic(t);
+      const value = Math.round(start + (target - start) * eased);
+      setAnimatedParticipants(value);
+      if (t < 1) {
+        participantsAnimRef.current = requestAnimationFrame(step);
+      } else {
+        participantsAnimRef.current = null;
+      }
+    };
+
+    if (participantsAnimRef.current) cancelAnimationFrame(participantsAnimRef.current);
+    participantsAnimRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (participantsAnimRef.current) cancelAnimationFrame(participantsAnimRef.current);
+      participantsAnimRef.current = null;
+    };
+  }, [data?.game.totalParticipants]);
+
   const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
     mutationFn: (payload) => {
       return submitGuess(gameId!, payload);
@@ -43,6 +127,10 @@ const GuessingView = (): JSX.Element => {
       setSubmissionFeedback(null);
     },
     onSuccess: () => {
+      // Fire a celebratory burst using overlay before navigating
+      try {
+        particlesRef.current?.burst({ preset: 'submit' });
+      } catch {}
       // After submitting a guess, refresh feeds and stop game polling, then navigate home
       void queryClient.invalidateQueries({ queryKey: ['activeGames'] });
       void queryClient.cancelQueries({ queryKey: ['game', gameId] });
@@ -102,7 +190,11 @@ const GuessingView = (): JSX.Element => {
 
   return (
     <section className="view view--guessing">
-      <div className="container">
+      <div className="container" style={{ position: 'relative' }}>
+        <ParticleOverlay ref={particlesRef} effectType="brushStroke" performance="medium" />
+        <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(1px, 1px, 1px, 1px)' }}>
+          {typeof announcedMedian === 'number' ? `Live median is ${announcedMedian}` : ''}
+        </div>
         <header className="feed-item feed-item--inline">
           <div className="feed-item__top">
             <span
@@ -111,7 +203,7 @@ const GuessingView = (): JSX.Element => {
               aria-live="polite"
               title={`${game?.totalParticipants ?? 0} unique ${(game?.totalParticipants ?? 0) === 1 ? 'player has' : 'players have'} submitted guesses`}
             >
-              👥 {game?.totalParticipants ?? '—'}
+              👥 {Number.isFinite(animatedParticipants) ? animatedParticipants : (game?.totalParticipants ?? '—')}
             </span>
             <span
               className={`chip chip--timer ${urgent ? 'chip--urgent' : ''}`}
@@ -141,19 +233,86 @@ const GuessingView = (): JSX.Element => {
 
         <form className="guess-form" onSubmit={handleSubmit} style={{ marginTop: 16 }}>
           <div className="toggle-group" style={{ marginBottom: 16 }}>
-            <label className="toggle-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={showJustification} 
+            <label
+              className="toggle-label"
+              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}
+            >
+              <input
+                type="checkbox"
+                checked={showJustification}
                 onChange={(e) => setShowJustification(e.target.checked)}
-                style={{ width: 20, height: 20 }}
                 aria-label="Enable justification input"
+                style={{
+                  // Visually hide but keep accessible
+                  position: 'absolute',
+                  opacity: 0,
+                  width: 1,
+                  height: 1,
+                  overflow: 'hidden',
+                }}
               />
+              <span
+                aria-hidden
+                style={{
+                  position: 'relative',
+                  width: 54,
+                  height: 30,
+                  borderRadius: 22,
+                  background: showJustification
+                    ? 'linear-gradient(135deg, rgba(255,215,0,0.9), rgba(255,165,0,0.8))'
+                    : 'linear-gradient(135deg, rgba(80,80,80,0.6), rgba(50,50,50,0.6))',
+                  boxShadow: showJustification
+                    ? '0 0 0 2px rgba(255,200,0,0.25), inset 0 0 12px rgba(0,0,0,0.35)'
+                    : 'inset 0 0 12px rgba(0,0,0,0.35)',
+                  transition: 'background 220ms ease, box-shadow 220ms ease',
+                }}
+              >
+                {/* Brush-stroke texture simulation with layered pseudo strokes */}
+                <span
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: 22,
+                    background: showJustification
+                      ? 'radial-gradient(120% 100% at 0% 100%, rgba(255,255,255,0.12) 0%, transparent 60%), radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,0.08) 0%, transparent 60%)'
+                      : 'radial-gradient(120% 100% at 0% 100%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,0.04) 0%, transparent 60%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: showJustification ? 28 : 3,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 16,
+                    background: showJustification
+                      ? 'conic-gradient(from 0deg, #fff 0 20%, #ffe08a 20% 60%, #fff 60% 100%)'
+                      : '#d0d0d0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(0,0,0,0.25)',
+                    transform: showJustification ? 'translateX(0)' : 'translateX(0)',
+                    transition: 'left 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease',
+                  }}
+                />
+              </span>
               <span style={{ color: '#fff', fontSize: '14px' }}>Influence the Hivemind</span>
             </label>
           </div>
 
-          <div className="justification-group" style={{ marginBottom: 16, display: showJustification ? 'block' : 'none' }}>
+          <div
+            className="justification-group"
+            style={{
+              marginBottom: 16,
+              display: showJustification ? 'block' : 'none',
+              position: 'relative',
+              borderRadius: 12,
+              padding: 8,
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+              boxShadow: 'inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 0 0 rgba(0,0,0,0)',
+              transition: 'box-shadow 200ms ease',
+            }}
+          >
             <label htmlFor="justification" className="label">Influence the Hivemind</label>
             <textarea 
               id="justification" 
@@ -163,6 +322,24 @@ const GuessingView = (): JSX.Element => {
               placeholder="Share your reasoning to influence the hivemind..." 
               maxLength={500}
               disabled={mutation.isPending}
+              onFocus={(e) => {
+                const wrapper = (e.currentTarget.parentElement as HTMLDivElement);
+                if (wrapper) wrapper.style.boxShadow = 'inset 0 0 0 1px rgba(255,215,0,0.35), 0 8px 24px rgba(0,0,0,0.25)';
+              }}
+              onBlur={(e) => {
+                const wrapper = (e.currentTarget.parentElement as HTMLDivElement);
+                if (wrapper) wrapper.style.boxShadow = 'inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 0 rgba(0,0,0,0)';
+              }}
+              style={{
+                borderRadius: 8,
+                border: 'none',
+                outline: 'none',
+                width: '100%',
+                padding: 12,
+                background: 'rgba(0,0,0,0.35)',
+                color: '#fff',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+              }}
             />
           </div>
 
