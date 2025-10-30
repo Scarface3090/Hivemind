@@ -56,8 +56,6 @@ export const SpectrumSlider = ({
 
     game.events.once(Phaser.Core.Events.BOOT, startScene);
 
-    let cleanup: (() => void) | null = null;
-
     const wireSceneEvents = () => {
       if (!gameRef.current) return;
       try {
@@ -76,7 +74,6 @@ export const SpectrumSlider = ({
           const off = () => {
             scene.events?.off?.('slider:valueChanged', handler);
           };
-          cleanup = off;
           sceneCleanupRef.current = off;
 
           // Ensure cleanup on scene shutdown (navigation/unmount)
@@ -97,12 +94,9 @@ export const SpectrumSlider = ({
         // Ensure any scene-level listener cleanup runs
         sceneCleanupRef.current?.();
         sceneCleanupRef.current = null;
-        cleanup?.();
       } finally {
         // Destroy the Phaser game and remove the canvas element entirely
-        if (!game.isDestroyed) {
-          game.destroy(true);
-        }
+        game.destroy(true);
         if (mountTarget.contains(game.canvas)) {
           mountTarget.removeChild(game.canvas);
         }

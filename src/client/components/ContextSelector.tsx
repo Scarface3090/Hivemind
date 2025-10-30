@@ -48,7 +48,6 @@ export const ContextSelector = ({
                 <div className="context-option__header">
                   <div className="context-option__name context-option__name--skeleton"></div>
                 </div>
-                <div className="context-option__description context-option__description--skeleton"></div>
                 <div className="context-option__count context-option__count--skeleton"></div>
               </div>
             </div>

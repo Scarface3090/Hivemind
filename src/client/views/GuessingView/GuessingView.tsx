@@ -18,6 +18,7 @@ const GuessingView = (): JSX.Element => {
   const particlesRef = useRef<ParticleOverlayHandle | null>(null);
   const [currentValue, setCurrentValue] = useState<number>(50);
   const [showJustification, setShowJustification] = useState<boolean>(true);
+  const [isJustificationFocused, setIsJustificationFocused] = useState<boolean>(false);
 
   const { data, isLoading, error } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
@@ -130,7 +131,9 @@ const GuessingView = (): JSX.Element => {
       // Fire a celebratory burst using overlay before navigating
       try {
         particlesRef.current?.burst({ preset: 'submit' });
-      } catch {}
+      } catch (err) {
+        console.warn('Failed to trigger particle burst:', err);
+      }
       // After submitting a guess, refresh feeds and stop game polling, then navigate home
       void queryClient.invalidateQueries({ queryKey: ['activeGames'] });
       void queryClient.cancelQueries({ queryKey: ['game', gameId] });
@@ -289,7 +292,7 @@ const GuessingView = (): JSX.Element => {
                     borderRadius: 16,
                     background: showJustification
                       ? 'conic-gradient(from 0deg, #fff 0 20%, #ffe08a 20% 60%, #fff 60% 100%)'
-                      : '#d0d0d0',
+                      : 'conic-gradient(from 0deg, #eee 0 20%, #bbb 20% 60%, #eee 60% 100%)',
                     boxShadow: '0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(0,0,0,0.25)',
                     transform: showJustification ? 'translateX(0)' : 'translateX(0)',
                     transition: 'left 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease',
@@ -309,7 +312,9 @@ const GuessingView = (): JSX.Element => {
               borderRadius: 12,
               padding: 8,
               background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
-              boxShadow: 'inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 0 0 rgba(0,0,0,0)',
+              boxShadow: isJustificationFocused
+                ? 'inset 0 0 0 1px rgba(255,215,0,0.35), 0 8px 24px rgba(0,0,0,0.25)'
+                : 'inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 0 rgba(0,0,0,0)',
               transition: 'box-shadow 200ms ease',
             }}
           >
@@ -322,14 +327,8 @@ const GuessingView = (): JSX.Element => {
               placeholder="Share your reasoning to influence the hivemind..." 
               maxLength={500}
               disabled={mutation.isPending}
-              onFocus={(e) => {
-                const wrapper = (e.currentTarget.parentElement as HTMLDivElement);
-                if (wrapper) wrapper.style.boxShadow = 'inset 0 0 0 1px rgba(255,215,0,0.35), 0 8px 24px rgba(0,0,0,0.25)';
-              }}
-              onBlur={(e) => {
-                const wrapper = (e.currentTarget.parentElement as HTMLDivElement);
-                if (wrapper) wrapper.style.boxShadow = 'inset 0 0 0 1px rgba(255,215,0,0.15), 0 0 0 rgba(0,0,0,0)';
-              }}
+              onFocus={() => setIsJustificationFocused(true)}
+              onBlur={() => setIsJustificationFocused(false)}
               style={{
                 borderRadius: 8,
                 border: 'none',

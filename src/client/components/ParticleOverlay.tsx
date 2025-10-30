@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { colors, particles, performance } from '../../shared/design-tokens.js';
 
 interface ParticleSystem {
@@ -209,7 +209,7 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
 
     const updateBurstParticles = () => {
       if (!burstMetaRef.current) return;
-      const now = performance.now();
+      const now = (globalThis.performance?.now?.() ?? Date.now());
       const elapsed = now - burstMetaRef.current.createdAt;
       const duration = burstMetaRef.current.durationMs;
       const t = Math.min(1, Math.max(0, elapsed / duration));
@@ -302,22 +302,24 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
       if (!burstColors) {
         switch (opts?.preset) {
           case 'submit':
-            burstColors = [colors.particles.primary, colors.particles.accent, colors.particles.secondary];
+            burstColors = [colors.particles.primary, colors.particles.burst, colors.particles.secondary];
             break;
           case 'streak':
             burstColors = [colors.particles.secondary, colors.particles.tertiary];
             break;
           case 'splat':
-            burstColors = [colors.particles.accent];
+            burstColors = [colors.particles.burst];
             break;
           default:
             burstColors = particleColors;
         }
       }
 
+      const finalBurstColors = burstColors ?? particleColors;
+
       const mk = (): Particle => {
         const angle = Math.random() * Math.PI * 2;
-        const speedPxPerFrame = (velocity / 1000) * (1 + Math.random() * 0.6); // px/ms scaled per frame time approximation
+        const speedPxPerFrame = (velocity / 60) * (1 + Math.random() * 0.6); // assume 60fps
         const size = 8 + Math.random() * 10;
         let shape: 'circle' | 'ellipse' | 'streak' | undefined;
         switch (opts?.preset) {
@@ -333,25 +335,28 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
           default:
             shape = undefined;
         }
-        return {
+        const color = finalBurstColors[Math.floor(Math.random() * finalBurstColors.length)] ?? colors.particles.primary;
+        const base = {
           x: cx,
           y: cy,
           vx: Math.cos(angle) * speedPxPerFrame,
           vy: Math.sin(angle) * speedPxPerFrame,
           size,
-          color: burstColors![Math.floor(Math.random() * burstColors!.length)],
+          color,
           opacity: 1,
           initialOpacity: 1,
           rotation: Math.random() * Math.PI,
           life: 0,
-          maxLife: durationMs / 16,
+          maxLife: Infinity, // unused for burst particles, managed by burstMetaRef timing
           fadeIn: 0,
-          shape,
-        };
+        } as const;
+        return (shape
+          ? { ...base, shape }
+          : { ...base }) as Particle;
       };
 
       burstsRef.current = Array.from({ length: count }, mk);
-      burstMetaRef.current = { createdAt: performance.now(), durationMs };
+      burstMetaRef.current = { createdAt: (globalThis.performance?.now?.() ?? Date.now()), durationMs };
     },
   }), [particleColors]);
 
