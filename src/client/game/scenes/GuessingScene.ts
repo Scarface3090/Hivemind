@@ -20,6 +20,10 @@ type GuessingSceneData = {
   median?: number | null;
   leftLabel?: string;
   rightLabel?: string;
+  // Enhanced consensus data
+  totalParticipants?: number;
+  consensusStrength?: number;
+  isActive?: boolean;
 };
 
 export class GuessingScene extends Phaser.Scene {
@@ -42,6 +46,12 @@ export class GuessingScene extends Phaser.Scene {
   private currentMedian: number | null = null;
   private leftLabel: string = '';
   private rightLabel: string = '';
+  
+  // Enhanced consensus state
+  private totalParticipants: number = 0;
+  private consensusStrength: number = 0;
+  private isActive: boolean = false;
+  private consensusEffects: Map<string, string> = new Map();
 
   // Particle system
   private particleManager!: ParticleSystemManager;
@@ -65,6 +75,10 @@ export class GuessingScene extends Phaser.Scene {
     if (typeof data.median === 'number') this.currentMedian = data.median;
     if (typeof data.leftLabel === 'string') this.leftLabel = data.leftLabel;
     if (typeof data.rightLabel === 'string') this.rightLabel = data.rightLabel;
+    if (typeof data.totalParticipants === 'number') this.totalParticipants = data.totalParticipants;
+    if (typeof data.consensusStrength === 'number') this.consensusStrength = data.consensusStrength;
+    if (typeof data.isActive === 'boolean') this.isActive = data.isActive;
+    
     if (this.leftLabel && this.rightLabel) {
       const [l, r] = getSpectrumColors(this.leftLabel, this.rightLabel);
       this.spectrumColorLeft = l;
@@ -421,6 +435,192 @@ export class GuessingScene extends Phaser.Scene {
     this.updateMedianVisuals();
   }
 
+  /**
+   * Update consensus data for enhanced visual effects
+   */
+  public setConsensusData(data: {
+    totalParticipants: number;
+    consensusStrength: number;
+    isActive: boolean;
+  }): void {
+    this.totalParticipants = data.totalParticipants;
+    this.consensusStrength = data.consensusStrength;
+    this.isActive = data.isActive;
+    
+    this.updateConsensusEffects();
+  }
+
+  /**
+   * Trigger specific consensus effects
+   */
+  public triggerConsensusEffect(type: 'newParticipant' | 'medianShift' | 'strongConsensus'): void {
+    const { width, height } = this.scale;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    switch (type) {
+      case 'newParticipant':
+        // Ripple effect from edges
+        this.createRippleEffect(0, centerY, centerX);
+        this.createRippleEffect(width, centerY, centerX);
+        break;
+        
+      case 'medianShift':
+        // Dramatic shift effect at median position
+        if (this.currentMedian !== null) {
+          const { left, right } = this.track.getBounds();
+          const medianX = this.valueToPosition(this.currentMedian, left, right);
+          this.createShiftEffect(medianX, this.track.y);
+        }
+        break;
+        
+      case 'strongConsensus':
+        // Crystallization effect across entire spectrum
+        this.createCrystallizationEffect();
+        break;
+    }
+  }
+
+  /**
+   * Update ambient consensus effects based on current state
+   */
+  private updateConsensusEffects(): void {
+    // Clear existing consensus effects
+    this.consensusEffects.forEach((effectId) => {
+      this.particleManager.destroyEffect(effectId);
+    });
+    this.consensusEffects.clear();
+    
+    const { width, height } = this.scale;
+    
+    // Add effects based on consensus strength
+    if (this.consensusStrength > 0.7) {
+      // Strong consensus - golden harmony particles
+      const harmonyEffect = this.particleManager.createAmbientParticles(
+        new Phaser.Geom.Rectangle(0, 0, width, height),
+        {
+          colors: [colors.particles.primary, colors.particles.burst],
+          count: Math.floor(8 + this.totalParticipants * 0.2),
+          size: { min: 4, max: 8 },
+          speed: { min: 5, max: 15 },
+          opacity: { min: 0.4, max: 0.7 }
+        }
+      );
+      this.consensusEffects.set('harmony', harmonyEffect);
+      
+    } else if (this.consensusStrength > 0.4) {
+      // Moderate consensus - flowing convergence
+      const convergenceEffect = this.particleManager.createAmbientParticles(
+        new Phaser.Geom.Rectangle(0, 0, width, height),
+        {
+          colors: [colors.particles.secondary, colors.particles.tertiary],
+          count: Math.floor(6 + this.totalParticipants * 0.15),
+          size: { min: 3, max: 6 },
+          speed: { min: 8, max: 20 },
+          opacity: { min: 0.3, max: 0.6 }
+        }
+      );
+      this.consensusEffects.set('convergence', convergenceEffect);
+      
+    } else if (this.totalParticipants > 0) {
+      // Low consensus - chaotic exploration
+      const chaosEffect = this.particleManager.createAmbientParticles(
+        new Phaser.Geom.Rectangle(0, 0, width, height),
+        {
+          colors: [colors.particles.trail, colors.decorative.mist],
+          count: Math.floor(4 + this.totalParticipants * 0.1),
+          size: { min: 2, max: 5 },
+          speed: { min: 15, max: 35 },
+          opacity: { min: 0.2, max: 0.4 }
+        }
+      );
+      this.consensusEffects.set('chaos', chaosEffect);
+    }
+  }
+
+  /**
+   * Create ripple effect for new participant
+   */
+  private createRippleEffect(startX: number, startY: number, targetX: number): void {
+    const rippleColors = [colors.particles.secondary, colors.particles.tertiary];
+    
+    // Create expanding ring effect
+    const ringEffect = this.particleManager.createOrganicBurst(startX, startY, {
+      colors: rippleColors,
+      count: 12,
+      duration: 800,
+      size: { min: 4, max: 10 },
+      speed: { min: 30, max: 60 }
+    });
+    
+    // Animate toward center
+    this.tweens.add({
+      targets: { x: startX },
+      x: targetX,
+      duration: 600,
+      ease: 'Quad.easeOut',
+      onUpdate: (tween) => {
+        const currentX = tween.getValue();
+        this.particleManager.updateTrailPosition(ringEffect, currentX, startY);
+      }
+    });
+  }
+
+  /**
+   * Create dramatic shift effect at median
+   */
+  private createShiftEffect(x: number, y: number): void {
+    // Explosive burst at median position
+    this.particleManager.createOrganicBurst(x, y, {
+      colors: [colors.particles.primary, colors.particles.burst, colors.particles.secondary],
+      count: 25,
+      duration: 1000,
+      size: { min: 6, max: 14 },
+      speed: { min: 50, max: 100 }
+    });
+    
+    // Screen flash effect
+    this.cameras.main.flash(200, 255, 215, 0, false);
+  }
+
+  /**
+   * Create crystallization effect for strong consensus
+   */
+  private createCrystallizationEffect(): void {
+    const { width, height } = this.scale;
+    
+    // Multiple synchronized bursts across the spectrum
+    const positions = [
+      { x: width * 0.2, y: height * 0.5 },
+      { x: width * 0.4, y: height * 0.3 },
+      { x: width * 0.6, y: height * 0.7 },
+      { x: width * 0.8, y: height * 0.4 }
+    ];
+    
+    positions.forEach((pos, index) => {
+      this.time.delayedCall(index * 150, () => {
+        this.particleManager.createOrganicBurst(pos.x, pos.y, {
+          colors: [colors.particles.primary, colors.particles.burst],
+          count: 20,
+          duration: 1200,
+          size: { min: 8, max: 16 },
+          speed: { min: 40, max: 80 }
+        });
+      });
+    });
+    
+    // Golden screen tint
+    this.cameras.main.setTint(0xffd700);
+    this.tweens.add({
+      targets: this.cameras.main,
+      alpha: { from: 0.9, to: 1 },
+      duration: 1000,
+      onComplete: () => {
+        this.cameras.main.clearTint();
+      }
+    });
+  }
+
   private valueToPosition(value: number, left: number, right: number): number {
     const t = (value - MIN_GUESS_VALUE) / (MAX_GUESS_VALUE - MIN_GUESS_VALUE);
     return Phaser.Math.Linear(left, right, t);
@@ -625,6 +825,12 @@ export class GuessingScene extends Phaser.Scene {
       this.particleManager.destroyEffect(this.ambientEffectId);
       this.ambientEffectId = null;
     }
+
+    // Clean up consensus effects
+    this.consensusEffects.forEach((effectId) => {
+      this.particleManager.destroyEffect(effectId);
+    });
+    this.consensusEffects.clear();
 
     // Clean up particle system
     if (this.particleManager) {

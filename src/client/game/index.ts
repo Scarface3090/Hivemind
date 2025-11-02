@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GuessingScene } from './scenes/GuessingScene.js';
 import { PreloaderScene } from './scenes/PreloaderScene.js';
+import { ConsensusVisualizationScene } from './scenes/ConsensusVisualizationScene.js';
 
 export interface SliderBridge {
   onValueChanged?: (value: number) => void;
@@ -41,7 +42,7 @@ export const createPhaserGame = ({ parent, width = 1024, height = 768 }: CreateG
       height: initialHeight,
     },
     parent: parentElement,
-    scene: [PreloaderScene, GuessingScene],
+    scene: [PreloaderScene, GuessingScene, ConsensusVisualizationScene],
     physics: { default: 'arcade' },
     render: { pixelArt: false, antialias: true },
   };

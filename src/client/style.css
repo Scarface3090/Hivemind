@@ -2908,3 +2908,164 @@ div[style*="rgba(255,255,255"] p {
     box-shadow: none !important;
   }
 }
+/* Enhanced Hivemind Visualization Styles */
+
+.hivemind-visualization {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.consensus-overlay {
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.05));
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(4px);
+}
+
+.enhanced-spectrum-slider-container {
+  position: relative;
+}
+
+.consensus-indicators {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #888;
+}
+
+.participants-indicator,
+.consensus-strength,
+.activity-pulse {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.consensus-bar {
+  margin-top: 8px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.atmospheric-effects {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.atmospheric-background {
+  border-radius: 12px;
+}
+
+.atmospheric-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+
+.unity-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  opacity: 0.6;
+}
+
+.chaos-static {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.3;
+}
+
+/* Enhanced animations */
+@keyframes consensus-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes atmospheric-pulse {
+  0%, 100% { 
+    filter: brightness(1) saturate(1);
+    transform: scale(1);
+  }
+  50% { 
+    filter: brightness(1.1) saturate(1.2);
+    transform: scale(1.005);
+  }
+}
+
+@keyframes rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes static-flicker {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .consensus-indicators {
+    font-size: 11px;
+    gap: 8px;
+  }
+  
+  .hivemind-visualization {
+    margin-bottom: 12px;
+  }
+  
+  .atmospheric-effects {
+    border-radius: 8px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .consensus-pulse,
+  .atmospheric-pulse,
+  .rotate,
+  .static-flicker {
+    animation: none !important;
+  }
+  
+  .atmospheric-particle {
+    transition: none !important;
+  }
+  
+  .consensus-bar > div {
+    transition: width 0.2s ease !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .consensus-overlay {
+    border: 2px solid #fff;
+    background: rgba(0,0,0,0.8);
+  }
+  
+  .atmospheric-effects {
+    opacity: 0.5;
+  }
+}

@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getGameById, submitGuess } from '../../api/games.js';
 import type { GamePollingResponse, GuessResponse } from '../../../shared/api.js';
-import { DEFAULT_MEDIAN_REFRESH_SECONDS, MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
+import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ApiError } from '../../api/client.js';
 import { SpectrumSlider } from '../../components/SpectrumSlider.js';
+import { SimpleConsensusCanvas } from '../../components/SimpleConsensusCanvas.js';
+import { JudgesScale } from '../../components/JudgesScale.js';
 import ParticleOverlay, { type ParticleOverlayHandle } from '../../components/ParticleOverlay.js';
 import { useCountdown } from '../../hooks/useCountdown.js';
 
@@ -20,11 +22,12 @@ const GuessingView = (): JSX.Element => {
   const [showJustification, setShowJustification] = useState<boolean>(true);
   const [isJustificationFocused, setIsJustificationFocused] = useState<boolean>(false);
 
-  const { data, isLoading, error } = useQuery<GamePollingResponse>({
+  const { data, isLoading, error, isFetching } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
     queryFn: () => getGameById(gameId!),
     enabled: !!gameId,
-    refetchInterval: DEFAULT_MEDIAN_REFRESH_SECONDS * 1000,
+    refetchInterval: 2000, // 2 seconds for near real-time updates (faster than default)
+    refetchIntervalInBackground: true, // Continue polling even when tab is not active
   });
 
   const [submissionFeedback, setSubmissionFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
@@ -42,6 +45,10 @@ const GuessingView = (): JSX.Element => {
   const [animatedParticipants, setAnimatedParticipants] = useState<number>(0);
   const participantsAnimRef = useRef<number | null>(null);
   const lastParticipantsRef = useRef<number>(0);
+  
+  // Enhanced consensus state (for future use)
+  const [, setConsensusStrength] = useState<number>(0);
+  const [, setIsHivemindActive] = useState<boolean>(false);
 
   // A11y: Debounced ARIA announcement for settled live median
   const [announcedMedian, setAnnouncedMedian] = useState<number | null>(null);
@@ -87,6 +94,23 @@ const GuessingView = (): JSX.Element => {
       return;
     }
 
+    // Calculate consensus strength and activity
+    const median = data?.median?.median;
+    if (median !== null && median !== undefined && target > 0) {
+      // Simple consensus calculation - in production this would use actual distribution data
+      const participantFactor = Math.min(1, target / 20);
+      const medianStability = 0.7; // Would be calculated from median history
+      setConsensusStrength(participantFactor * medianStability);
+    } else {
+      setConsensusStrength(0);
+    }
+    
+    // Detect activity (new participants)
+    if (target > start) {
+      setIsHivemindActive(true);
+      setTimeout(() => setIsHivemindActive(false), 3000); // Active state for 3 seconds
+    }
+
     const reduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduced) {
       setAnimatedParticipants(target);
@@ -118,7 +142,7 @@ const GuessingView = (): JSX.Element => {
       if (participantsAnimRef.current) cancelAnimationFrame(participantsAnimRef.current);
       participantsAnimRef.current = null;
     };
-  }, [data?.game.totalParticipants]);
+  }, [data?.game.totalParticipants, data?.median?.median]);
 
   const mutation = useMutation<GuessResponse, unknown, { value: number; justification?: string }>({
     mutationFn: (payload) => {
@@ -194,9 +218,11 @@ const GuessingView = (): JSX.Element => {
   return (
     <section className="view view--guessing">
       <div className="container" style={{ position: 'relative' }}>
+
+        
         <ParticleOverlay ref={particlesRef} effectType="brushStroke" performance="medium" />
         <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(1px, 1px, 1px, 1px)' }}>
-          {typeof announcedMedian === 'number' ? `Live median is ${announcedMedian}` : ''}
+          {typeof announcedMedian === 'number' ? `Hivemind verdict is ${announcedMedian}` : ''}
         </div>
         <header className="feed-item feed-item--inline">
           <div className="feed-item__top">
@@ -220,18 +246,112 @@ const GuessingView = (): JSX.Element => {
 
           <div className="feed-item__meta">
             <p className="feed-item__host">Hosted by {game?.hostUsername ?? '—'}</p>
+            {/* Show Topic above the clue */}
+            {game?.spectrum && (
+              <div style={{
+                fontSize: '12px',
+                color: '#888',
+                textAlign: 'center',
+                marginBottom: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Topic: {game.spectrum.leftLabel} ↔ {game.spectrum.rightLabel}
+              </div>
+            )}
             <h2 className="feed-item__title feed-item__title--center">{game?.clue ?? 'Loading game…'}</h2>
           </div>
 
         </header>
 
+        {/* Real-time Judge's Scale - Prominent Position */}
         {game?.spectrum && (
-          <SpectrumSlider
-            spectrum={game.spectrum}
-            value={currentValue}
-            onValueChange={updateCurrentValue}
+          <JudgesScale
             median={data?.median?.median ?? null}
+            totalParticipants={game.totalParticipants}
+            className="judges-scale-main"
           />
+        )}
+
+        {/* Hivemind Activity Visualization */}
+        {game?.spectrum && (
+          <div className="hivemind-visualization" style={{ marginBottom: '20px', position: 'relative' }}>
+            <SimpleConsensusCanvas
+              median={data?.median?.median ?? null}
+              totalParticipants={game.totalParticipants}
+              className="consensus-overlay"
+            />
+            
+            {/* Real-time data indicator */}
+            {isFetching && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  left: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: '#00ff88',
+                  background: 'rgba(0,0,0,0.6)',
+                  padding: '2px 6px',
+                  borderRadius: '8px',
+                  zIndex: 10
+                }}
+              >
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#00ff88',
+                    animation: 'pulse 1s ease-in-out infinite'
+                  }}
+                />
+                Live
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Spectrum slider with live feedback */}
+        {game?.spectrum && (
+          <div className="spectrum-section">
+            <SpectrumSlider
+              spectrum={game.spectrum}
+              value={currentValue}
+              onValueChange={updateCurrentValue}
+              median={data?.median?.median ?? null}
+              className="enhanced-slider"
+            />
+            
+            {/* Live feedback about user's guess vs hivemind */}
+            {data?.median?.median !== null && data?.median?.median !== undefined && (
+              <div style={{
+                marginTop: '12px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.3)',
+                fontSize: '12px',
+                textAlign: 'center'
+              }}>
+                {Math.abs(currentValue - data.median.median) <= 5 ? (
+                  <span style={{ color: '#00ff88' }}>
+                    🎯 You're aligned with the hivemind verdict! (within 5 points)
+                  </span>
+                ) : currentValue < data.median.median ? (
+                  <span style={{ color: '#ffaa00' }}>
+                    📉 You're {data.median.median - currentValue} points below the hivemind verdict
+                  </span>
+                ) : (
+                  <span style={{ color: '#ffaa00' }}>
+                    📈 You're {currentValue - data.median.median} points above the hivemind verdict
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         <form className="guess-form" onSubmit={handleSubmit} style={{ marginTop: 16 }}>
