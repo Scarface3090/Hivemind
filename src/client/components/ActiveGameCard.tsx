@@ -46,6 +46,18 @@ export function ActiveGameCard({ game }: { game: GameMetadata }): JSX.Element {
 
       {/* Main content area */}
       <div className="feed-item__content">
+        {/* Show Topic (Context) above the clue */}
+        {game.spectrum?.context && (
+          <div style={{
+            fontSize: '11px',
+            color: '#888',
+            marginBottom: '4px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Topic: {game.spectrum.context}
+          </div>
+        )}
         <h3 className="feed-item__title">{game.clue}</h3>
         <SpectrumPill spectrum={game.spectrum} variant="full" className="feed-item__spectrum" />
       </div>

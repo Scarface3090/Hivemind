@@ -246,8 +246,8 @@ const GuessingView = (): JSX.Element => {
 
           <div className="feed-item__meta">
             <p className="feed-item__host">Hosted by {game?.hostUsername ?? '—'}</p>
-            {/* Show Topic above the clue */}
-            {game?.spectrum && (
+            {/* Show Topic (Context) above the clue */}
+            {game?.spectrum?.context && (
               <div style={{
                 fontSize: '12px',
                 color: '#888',
@@ -256,7 +256,7 @@ const GuessingView = (): JSX.Element => {
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
-                Topic: {game.spectrum.leftLabel} ↔ {game.spectrum.rightLabel}
+                Topic: {game.spectrum.context}
               </div>
             )}
             <h2 className="feed-item__title feed-item__title--center">{game?.clue ?? 'Loading game…'}</h2>
@@ -264,12 +264,14 @@ const GuessingView = (): JSX.Element => {
 
         </header>
 
-        {/* Real-time Judge's Scale - Prominent Position */}
+        {/* Real-time Speedometer - Prominent Position */}
         {game?.spectrum && (
           <JudgesScale
             median={data?.median?.median ?? null}
             totalParticipants={game.totalParticipants}
-            className="judges-scale-main"
+            leftLabel={game.spectrum.leftLabel}
+            rightLabel={game.spectrum.rightLabel}
+            className="speedometer-main"
           />
         )}
 
