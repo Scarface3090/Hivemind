@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import Phaser from 'phaser';
 import { ConsensusVisualizationScene } from '../game/scenes/ConsensusVisualizationScene.js';
 import { PreloaderScene } from '../game/scenes/PreloaderScene.js';
@@ -33,6 +33,7 @@ export const ConsensusCanvas = ({
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<ConsensusVisualizationScene | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [height, setHeight] = useState<number>(160);
   
   // Track previous values to detect changes
   const prevDataRef = useRef<{
@@ -55,7 +56,9 @@ export const ConsensusCanvas = ({
     // Simple heuristic: assume normal distribution around median
     // In a real implementation, this would use actual guess distribution data
     const participantFactor = Math.min(1, participants / 20); // More participants = potentially stronger consensus
-    const medianCentrality = 1 - Math.abs((median - 50) / 50); // Closer to center = potentially stronger consensus
+    const center = (MIN_GUESS_VALUE + MAX_GUESS_VALUE) / 2;
+    const halfRange = (MAX_GUESS_VALUE - MIN_GUESS_VALUE) / 2;
+    const medianCentrality = 1 - Math.abs((median - center) / halfRange); // Closer to center = potentially stronger consensus
     
     return participantFactor * medianCentrality * 0.8; // Max 0.8 to leave room for real distribution analysis
   }, []);
@@ -83,8 +86,7 @@ export const ConsensusCanvas = ({
       
       // Bell curve with some randomness
       const baseCount = Math.exp(-Math.pow(normalizedDistance * 2, 2));
-      const randomFactor = 0.7 + Math.random() * 0.6; // 0.7 to 1.3
-      const count = Math.floor(baseCount * participants * randomFactor);
+      const count = Math.floor(baseCount * participants);
       
       if (count > 0) {
         distribution.push({
@@ -156,7 +158,7 @@ export const ConsensusCanvas = ({
     const measure = (): { w: number; h: number } => {
       const w = Math.max(1, container.clientWidth || 640);
       const h = Math.max(120, Math.min(200, Math.round(w * 0.25))); // Aspect ratio for consensus overlay
-      container.style.height = `${h}px`;
+      setHeight(h);
       return { w, h };
     };
 
@@ -247,7 +249,7 @@ export const ConsensusCanvas = ({
       className={`consensus-canvas ${className}`.trim()}
       style={{ 
         width: '100%', 
-        height: 160,
+        height: `${height}px`,
         overflow: 'hidden',
         borderRadius: '12px',
         background: 'linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.05))',

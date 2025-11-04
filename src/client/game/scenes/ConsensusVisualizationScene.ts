@@ -123,8 +123,8 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
    * Create atmospheric particle effects based on consensus state
    */
   private createAtmosphereEffects(): void {
-    const { width, height } = this.scale;
-    const bounds = new Phaser.Geom.Rectangle(0, 0, width, height);
+    const { height } = this.scale;
+    const bounds = new Phaser.Geom.Rectangle(0, 0, this.scale.width, height);
     
     // Ambient consensus particles
     const ambientEffect = this.particleManager.createAmbientParticles(bounds, {
@@ -135,7 +135,9 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
       opacity: { min: 0.1, max: 0.3 }
     });
     
-    this.atmosphereEffects.set('ambient', ambientEffect);
+    if (ambientEffect) {
+      this.atmosphereEffects.set('ambient', ambientEffect);
+    }
   }
 
   /**
@@ -144,10 +146,11 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
   private updateJudgeScale(): void {
     if (this.consensusData.median === null) return;
     
-    const { width } = this.scale;
+    const guessRange = MAX_GUESS_VALUE - MIN_GUESS_VALUE;
+    if (guessRange === 0) return;
     
     // Calculate balance based on median position
-    const medianNormalized = (this.consensusData.median - MIN_GUESS_VALUE) / (MAX_GUESS_VALUE - MIN_GUESS_VALUE);
+    const medianNormalized = (this.consensusData.median - MIN_GUESS_VALUE) / guessRange;
     const targetBalance = (medianNormalized - 0.5) * 2; // -1 to 1
     
     // Add oscillation for uncertainty
@@ -264,6 +267,7 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
       ? [colors.brushStrokes.orange, colors.particles.secondary]
       : [colors.brushStrokes.teal, colors.particles.tertiary];
     
+    // Create burst effect (auto-cleanup handled by particle manager)
     this.particleManager.createOrganicBurst(x, y, {
       colors: colors_array,
       count: particleCount,
@@ -280,10 +284,14 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
     if (!this.consensusData.guessDistribution.length) return;
     
     const { width } = this.scale;
+    const range = MAX_GUESS_VALUE - MIN_GUESS_VALUE;
+    
+    // Guard against division by zero
+    if (range === 0) return;
     
     // Update heatmap points based on guess distribution
     this.heatmapPoints = this.consensusData.guessDistribution.map(point => {
-      const normalizedX = (point.value - MIN_GUESS_VALUE) / (MAX_GUESS_VALUE - MIN_GUESS_VALUE);
+      const normalizedX = (point.value - MIN_GUESS_VALUE) / range;
       return {
         x: normalizedX * width,
         intensity: point.count / Math.max(1, this.consensusData.totalParticipants),
@@ -354,6 +362,7 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
     // Destroy existing beacon
     if (this.consensusBeaconEffect) {
       this.particleManager.destroyEffect(this.consensusBeaconEffect);
+      this.consensusBeaconEffect = null;
     }
     
     // Create new beacon with intensity based on consensus strength
@@ -362,7 +371,7 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
       ? [colors.particles.primary, colors.particles.burst]
       : [colors.particles.secondary, colors.particles.tertiary];
     
-    this.consensusBeaconEffect = this.particleManager.createAmbientParticles(
+    const newBeacon = this.particleManager.createAmbientParticles(
       new Phaser.Geom.Rectangle(beaconX - 20, beaconY - 20, 40, 40),
       {
         colors: beaconColors,
@@ -372,6 +381,10 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
         opacity: { min: 0.4, max: 0.8 }
       }
     );
+    
+    if (newBeacon) {
+      this.consensusBeaconEffect = newBeacon;
+    }
   }
 
   /**
@@ -393,8 +406,16 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
   private updateHeartbeat(): void {
     const activityLevel = Math.min(1, this.consensusData.recentActivity / 10);
     
-    // Pulse all visual elements
-    this.cameras.main.flash(50, 255, 255, 255, false);
+    // Scale flash intensity and duration based on activity level
+    const intensity = Math.round(255 * activityLevel);
+    const duration = Math.max(150, Math.round(150 + activityLevel * 350));
+    
+    // Clamp values to valid ranges to avoid runtime warnings
+    const clampedIntensity = Math.max(0, Math.min(255, intensity));
+    const clampedDuration = Math.max(50, Math.min(1000, duration));
+    
+    // Pulse all visual elements with activity-scaled intensity
+    this.cameras.main.flash(clampedDuration, clampedIntensity, clampedIntensity, clampedIntensity, false);
   }
 
   /**
@@ -447,6 +468,11 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
       speed: { min: 40, max: 80 }
     });
     
+    if (!streamEffect) return;
+    
+    // Track effect for cleanup
+    this.guessStreamEffects.push(streamEffect);
+    
     // Animate stream toward target
     this.tweens.add({
       targets: { x: startX },
@@ -458,6 +484,10 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
         this.particleManager.updateTrailPosition(streamEffect, currentX, streamY);
       },
       onComplete: () => {
+        const index = this.guessStreamEffects.indexOf(streamEffect);
+        if (index > -1) {
+          this.guessStreamEffects.splice(index, 1);
+        }
         this.particleManager.destroyEffect(streamEffect);
       }
     });
@@ -491,7 +521,9 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
           opacity: { min: 0.6, max: 0.9 }
         }
       );
-      this.atmosphereEffects.set('crystal', crystalEffect);
+      if (crystalEffect) {
+        this.atmosphereEffects.set('crystal', crystalEffect);
+      }
       
     } else if (strength < 0.3) {
       // Low consensus - chaotic fog effects
@@ -505,7 +537,9 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
           opacity: { min: 0.1, max: 0.4 }
         }
       );
-      this.atmosphereEffects.set('fog', fogEffect);
+      if (fogEffect) {
+        this.atmosphereEffects.set('fog', fogEffect);
+      }
     }
   }
 
@@ -525,7 +559,7 @@ export class ConsensusVisualizationScene extends Phaser.Scene {
     // Update atmosphere bounds - placeholder for future enhancement
   }
 
-  override update(time: number, delta: number): void {
+  override update(_time: number, delta: number): void {
     // Age heatmap points for fade effect
     this.heatmapPoints.forEach(point => {
       point.age += delta;

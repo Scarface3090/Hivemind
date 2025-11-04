@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { colors, animations } from '../../shared/design-tokens.js';
 
 interface AtmosphericEffectsProps {
@@ -32,11 +32,26 @@ export const AtmosphericEffects = ({
     opacity: number;
     color: string;
     life: number;
+    initialLife: number;
   }>>([]);
   
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
   const particleIdRef = useRef<number>(0);
+  
+  // Refs to hold latest values for the animation loop
+  const latestValuesRef = useRef({
+    currentMood,
+    isActive,
+    containerRef
+  });
+
+  // Update latest values ref on every render
+  latestValuesRef.current = {
+    currentMood,
+    isActive,
+    containerRef
+  };
 
   /**
    * Determine mood state based on consensus metrics
@@ -117,31 +132,10 @@ export const AtmosphericEffects = ({
   };
 
   /**
-   * Create mood-appropriate particles
-   */
-  const createParticle = (container: DOMRect): void => {
-    const particleConfig = getMoodParticleConfig();
-    
-    const particle = {
-      id: ++particleIdRef.current,
-      x: Math.random() * container.width,
-      y: Math.random() * container.height,
-      vx: (Math.random() - 0.5) * particleConfig.speed,
-      vy: (Math.random() - 0.5) * particleConfig.speed,
-      size: particleConfig.minSize + Math.random() * (particleConfig.maxSize - particleConfig.minSize),
-      opacity: particleConfig.minOpacity + Math.random() * (particleConfig.maxOpacity - particleConfig.minOpacity),
-      color: particleConfig.colors[Math.floor(Math.random() * particleConfig.colors.length)] || '#ffffff',
-      life: particleConfig.life
-    };
-    
-    setParticles(prev => [...prev.slice(-particleConfig.maxCount), particle]);
-  };
-
-  /**
    * Get particle configuration for current mood
    */
-  const getMoodParticleConfig = () => {
-    switch (currentMood) {
+  const getMoodParticleConfig = useCallback((mood: MoodState) => {
+    switch (mood) {
       case 'unified':
         return {
           colors: [colors.particles.primary, colors.particles.burst],
@@ -190,16 +184,41 @@ export const AtmosphericEffects = ({
           maxCount: 8
         };
     }
-  };
+  }, []);
+
+  /**
+   * Create mood-appropriate particles
+   */
+  const createParticle = useCallback((container: DOMRect, mood: MoodState): void => {
+    const particleConfig = getMoodParticleConfig(mood);
+    
+    const particle = {
+      id: ++particleIdRef.current,
+      x: Math.random() * container.width,
+      y: Math.random() * container.height,
+      vx: (Math.random() - 0.5) * particleConfig.speed,
+      vy: (Math.random() - 0.5) * particleConfig.speed,
+      size: particleConfig.minSize + Math.random() * (particleConfig.maxSize - particleConfig.minSize),
+      opacity: particleConfig.minOpacity + Math.random() * (particleConfig.maxOpacity - particleConfig.minOpacity),
+      color: particleConfig.colors[Math.floor(Math.random() * particleConfig.colors.length)] || '#ffffff',
+      life: particleConfig.life,
+      initialLife: particleConfig.life
+    };
+    
+    setParticles(prev => [...prev.slice(-particleConfig.maxCount), particle]);
+  }, [getMoodParticleConfig]);
 
   /**
    * Animation loop for particles
    */
-  const animateParticles = (currentTime: number): void => {
+  const animateParticles = useCallback((currentTime: number): void => {
     const deltaTime = currentTime - lastTimeRef.current;
     lastTimeRef.current = currentTime;
     
     if (deltaTime > 16) { // ~60fps cap
+      const { currentMood: latestMood, isActive: latestIsActive, containerRef: latestContainerRef } = latestValuesRef.current;
+      const particleConfig = getMoodParticleConfig(latestMood);
+      
       setParticles(prev => 
         prev
           .map(particle => ({
@@ -207,20 +226,20 @@ export const AtmosphericEffects = ({
             x: particle.x + particle.vx,
             y: particle.y + particle.vy,
             life: particle.life - deltaTime,
-            opacity: particle.opacity * (particle.life / getMoodParticleConfig().life)
+            opacity: particle.opacity * (particle.life / particle.initialLife)
           }))
           .filter(particle => particle.life > 0 && particle.opacity > 0.01)
       );
       
       // Create new particles based on activity
-      const container = containerRef.current?.getBoundingClientRect();
-      if (container && Math.random() < (isActive ? 0.3 : 0.1)) {
-        createParticle(container);
+      const container = latestContainerRef.current?.getBoundingClientRect();
+      if (container && Math.random() < (latestIsActive ? 0.3 : 0.1)) {
+        createParticle(container, latestMood);
       }
     }
     
     animationFrameRef.current = requestAnimationFrame(animateParticles);
-  };
+  }, [getMoodParticleConfig, createParticle]);
 
   /**
    * Start/stop animation loop
@@ -233,7 +252,7 @@ export const AtmosphericEffects = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [currentMood, isActive]);
+  }, [animateParticles]);
 
   /**
    * Activity pulse effect

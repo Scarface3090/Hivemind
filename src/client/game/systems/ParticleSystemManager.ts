@@ -171,7 +171,7 @@ export class ParticleSystemManager {
     x: number,
     y: number,
     config?: Partial<ParticleEffectConfig>
-  ): string {
+  ): string | null {
     const effectId = `brush-trail-${++effectCounter}`;
 
     const finalConfig: ParticleEffectConfig = {
@@ -193,10 +193,9 @@ export class ParticleSystemManager {
     // Note: 'particle-texture' must be preloaded in the scene's preload method
     if (!this.scene.textures.exists('particle-texture')) {
       console.error(
-        'ParticleSystemManager: particle-texture not found. Falling back to default texture.'
+        'ParticleSystemManager: particle-texture not found. Cannot create brush stroke trail.'
       );
-      // Fall back to a known-safe default texture or early return
-      return effectId;
+      return null;
     }
 
     const emitter = this.scene.add.particles(x, y, 'particle-texture', {
@@ -233,7 +232,7 @@ export class ParticleSystemManager {
     return effectId;
   }
 
-  public createOrganicBurst(x: number, y: number, config?: Partial<ParticleEffectConfig>): string {
+  public createOrganicBurst(x: number, y: number, config?: Partial<ParticleEffectConfig>): string | null {
     const effectId = `organic-burst-${++effectCounter}`;
 
     const finalConfig: ParticleEffectConfig = {
@@ -252,7 +251,7 @@ export class ParticleSystemManager {
     };
 
     // Validate that particle texture is loaded before creating particles
-    if (!this.validateTexture()) return effectId;
+    if (!this.validateTexture()) return null;
 
     const emitter = this.scene.add.particles(x, y, 'particle-texture', {
       speed: { min: finalConfig.speed.min, max: finalConfig.speed.max },
@@ -294,7 +293,7 @@ export class ParticleSystemManager {
   public createAmbientParticles(
     bounds: Phaser.Geom.Rectangle,
     config?: Partial<ParticleEffectConfig>
-  ): string {
+  ): string | null {
     const effectId = `ambient-${++effectCounter}`;
 
     const finalConfig: ParticleEffectConfig = {
@@ -312,7 +311,7 @@ export class ParticleSystemManager {
     };
 
     // Validate that particle texture is loaded before creating particles
-    if (!this.validateTexture()) return effectId;
+    if (!this.validateTexture()) return null;
 
     const emitter = this.scene.add.particles(bounds.centerX, bounds.centerY, 'particle-texture', {
       speed: { min: finalConfig.speed.min, max: finalConfig.speed.max },

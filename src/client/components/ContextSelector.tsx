@@ -99,11 +99,7 @@ export const ContextSelector = ({
               className={`context-option ${
                 isSelected ? 'context-option--selected' : ''
               } ${isDisabled ? 'context-option--disabled' : ''} transition-colors transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:shadow-md rounded-2xl border-[3px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-400 brush-stroke`}
-              onClick={() => {
-                if (!isDisabled) {
-                  onContextSelect(contextSummary.context);
-                }
-              }}
+              onClick={() => onContextSelect(contextSummary.context)}
               disabled={isDisabled}
               aria-pressed={isSelected}
             >

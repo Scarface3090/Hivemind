@@ -50,16 +50,16 @@ export interface ParticleOverlayHandle {
 interface Particle {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  vx: number; // pixels per millisecond
+  vy: number; // pixels per millisecond
   size: number;
   color: string;
   opacity: number;
   initialOpacity: number;
   rotation: number;
-  life: number;
-  maxLife: number;
-  // Number of frames to fade in from 0 to initialOpacity after spawn/reset
+  life: number; // milliseconds
+  maxLife: number; // milliseconds
+  // Time in ms to fade in from 0 to initialOpacity after spawn/reset
   fadeIn: number;
   shape?: 'circle' | 'ellipse' | 'streak';
 }
@@ -76,6 +76,7 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
   const particlesRef = useRef<Particle[]>([]);
   const burstsRef = useRef<Particle[]>([]);
   const burstMetaRef = useRef<{ createdAt: number; durationMs: number } | null>(null);
+  const lastFrameTimeRef = useRef<number>(0);
   const particleColors = useMemo(() => {
     if (providedColors) return providedColors;
 
@@ -116,7 +117,7 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
     if (!ctx) return;
 
     // Keep fade in short to avoid visible pops while remaining subtle
-    const fadeInFrames = 20;
+    const fadeInMs = 333; // ~20 frames at 60fps
 
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
@@ -148,12 +149,15 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
           : { min: 0.3, max: 1.0 };
 
       const initialOpacity = effectType === 'ambient' ? 0.6 : 0.8;
+      
+      // Convert speed from pixels/second to pixels/millisecond
+      const speedPxPerMs = speedRange.max / 1000;
 
       return {
         x: Math.random() * canvas.offsetWidth,
         y: Math.random() * canvas.offsetHeight,
-        vx: (Math.random() - 0.5) * 2 * speedRange.max,
-        vy: (Math.random() - 0.5) * 2 * speedRange.max,
+        vx: (Math.random() - 0.5) * 2 * speedPxPerMs,
+        vy: (Math.random() - 0.5) * 2 * speedPxPerMs,
         size: Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min,
         color:
           particleColors[Math.floor(Math.random() * particleColors.length)] ||
@@ -163,8 +167,8 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
         initialOpacity: initialOpacity,
         rotation: Math.random() * Math.PI,
         life: 0,
-        maxLife: Math.random() * 300 + 150,
-        fadeIn: fadeInFrames,
+        maxLife: Math.random() * 5000 + 2500, // 2.5-7.5 seconds in ms
+        fadeIn: fadeInMs,
       };
     };
 
@@ -172,11 +176,11 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
       particlesRef.current = Array.from({ length: adjustedParticleCount }, createParticle);
     };
 
-    const updateParticles = () => {
+    const updateParticles = (deltaMs: number) => {
       particlesRef.current.forEach((particle) => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.life++;
+        particle.x += particle.vx * deltaMs;
+        particle.y += particle.vy * deltaMs;
+        particle.life += deltaMs;
 
         // Compute base fade-out over life
         const baseOpacity = Math.max(
@@ -185,9 +189,9 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
         );
         // Apply fade-in on spawn/reset
         if (particle.fadeIn > 0) {
-          const progress = 1 - particle.fadeIn / fadeInFrames; // 0 -> 1
+          const progress = 1 - particle.fadeIn / fadeInMs; // 0 -> 1
           particle.opacity = baseOpacity * Math.max(0, Math.min(1, progress));
-          particle.fadeIn -= 1;
+          particle.fadeIn -= deltaMs;
         } else {
           particle.opacity = baseOpacity;
         }
@@ -207,7 +211,7 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
       });
     };
 
-    const updateBurstParticles = () => {
+    const updateBurstParticles = (deltaMs: number) => {
       if (!burstMetaRef.current) return;
       const now = (globalThis.performance?.now?.() ?? Date.now());
       const elapsed = now - burstMetaRef.current.createdAt;
@@ -216,9 +220,9 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
 
       // Ease-out fade for burst particles
       burstsRef.current.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life++;
+        p.x += p.vx * deltaMs;
+        p.y += p.vy * deltaMs;
+        p.life += deltaMs;
         const remaining = 1 - t;
         p.opacity = p.initialOpacity * Math.max(0, remaining);
       });
@@ -266,16 +270,20 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
       burstsRef.current.forEach((particle) => drawOne(particle, isBrush));
     };
 
-    const animate = () => {
-      updateParticles();
-      updateBurstParticles();
+    const animate = (currentTime: number) => {
+      const deltaMs = lastFrameTimeRef.current === 0 ? 16.67 : currentTime - lastFrameTimeRef.current; // Default to ~60fps on first frame
+      lastFrameTimeRef.current = currentTime;
+      
+      updateParticles(deltaMs);
+      updateBurstParticles(deltaMs);
       drawParticles();
       animationRef.current = requestAnimationFrame(animate);
     };
 
     resizeCanvas();
     initParticles();
-    animate();
+    lastFrameTimeRef.current = 0; // Reset timing on mount
+    animationRef.current = requestAnimationFrame(animate);
 
     window.addEventListener('resize', resizeCanvas);
 
@@ -319,7 +327,7 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
 
       const mk = (): Particle => {
         const angle = Math.random() * Math.PI * 2;
-        const speedPxPerFrame = (velocity / 60) * (1 + Math.random() * 0.6); // assume 60fps
+        const speedPxPerMs = (velocity / 1000) * (1 + Math.random() * 0.6); // pixels per millisecond
         const size = 8 + Math.random() * 10;
         let shape: 'circle' | 'ellipse' | 'streak' | undefined;
         switch (opts?.preset) {
@@ -339,8 +347,8 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
         const base = {
           x: cx,
           y: cy,
-          vx: Math.cos(angle) * speedPxPerFrame,
-          vy: Math.sin(angle) * speedPxPerFrame,
+          vx: Math.cos(angle) * speedPxPerMs,
+          vy: Math.sin(angle) * speedPxPerMs,
           size,
           color,
           opacity: 1,

@@ -17,6 +17,7 @@ describe('spectrumColors', () => {
     expect(typeof r).toBe('number');
     expect(l).not.toBeNaN();
     expect(r).not.toBeNaN();
+    expect(l).not.toBe(r);
   });
 
   it('lerpColor interpolates endpoints at t=0 and t=1', () => {

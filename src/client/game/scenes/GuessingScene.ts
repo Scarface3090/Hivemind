@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ParticleSystemManager } from '../systems/ParticleSystemManager.js';
 import { colors } from '../../../shared/design-tokens.js';
-import { getSpectrumColors, lerpColor, jitter } from '../../../shared/utils/spectrumColors.js';
+import { getSpectrumColors, lerpColor } from '../../../shared/utils/spectrumColors.js';
 /**
  * Artistic Enhancements:
  * - Painterly gradient track using spectrum-derived colors (multi-pass jittered strokes)
@@ -23,7 +23,6 @@ type GuessingSceneData = {
   // Enhanced consensus data
   totalParticipants?: number;
   consensusStrength?: number;
-  isActive?: boolean;
 };
 
 export class GuessingScene extends Phaser.Scene {
@@ -50,7 +49,6 @@ export class GuessingScene extends Phaser.Scene {
   // Enhanced consensus state
   private totalParticipants: number = 0;
   private consensusStrength: number = 0;
-  private isActive: boolean = false;
   private consensusEffects: Map<string, string> = new Map();
 
   // Particle system
@@ -59,7 +57,7 @@ export class GuessingScene extends Phaser.Scene {
   private ambientEffectId: string | null = null;
   private isDragging: boolean = false;
   private medianPulseTween: Phaser.Tweens.Tween | null = null;
-  private medianTimeline: Phaser.Tweens.Timeline | null = null;
+  private medianTimeline: any | null = null;
   private medianAnimatedX: number | null = null;
   private jitterAmp: number = 0;
   private isEmittingInternal: boolean = false;
@@ -77,7 +75,6 @@ export class GuessingScene extends Phaser.Scene {
     if (typeof data.rightLabel === 'string') this.rightLabel = data.rightLabel;
     if (typeof data.totalParticipants === 'number') this.totalParticipants = data.totalParticipants;
     if (typeof data.consensusStrength === 'number') this.consensusStrength = data.consensusStrength;
-    if (typeof data.isActive === 'boolean') this.isActive = data.isActive;
     
     if (this.leftLabel && this.rightLabel) {
       const [l, r] = getSpectrumColors(this.leftLabel, this.rightLabel);
@@ -172,8 +169,8 @@ export class GuessingScene extends Phaser.Scene {
         }
 
         // Create brush stroke trail effect (medium density) using spectrum colors
-        const trailLeft = this.spectrumColorLeft ?? colors.particles.primary;
-        const trailRight = this.spectrumColorRight ?? colors.particles.secondary;
+        const trailLeft = this.spectrumColorLeft?.toString() ?? colors.particles.primary;
+        const trailRight = this.spectrumColorRight?.toString() ?? colors.particles.secondary;
         this.trailEffectId = this.particleManager.createBrushStrokeTrail(
           this.handle.x,
           this.handle.y,
@@ -233,8 +230,8 @@ export class GuessingScene extends Phaser.Scene {
         }
 
         // Create organic burst effect on release
-        const burstLeft = this.spectrumColorLeft ?? colors.particles.primary;
-        const burstRight = this.spectrumColorRight ?? colors.particles.tertiary;
+        const burstLeft = this.spectrumColorLeft?.toString() ?? colors.particles.primary;
+        const burstRight = this.spectrumColorRight?.toString() ?? colors.particles.tertiary;
         this.particleManager.createOrganicBurst(this.handle.x, this.handle.y, {
           colors: [burstLeft, burstRight],
           count: 18,
@@ -245,7 +242,6 @@ export class GuessingScene extends Phaser.Scene {
         const { left, right } = this.track.getBounds();
         const targetX = Phaser.Math.Clamp(this.handle.x + this.lastDragVX * 6, left, right);
         if (Math.abs(targetX - this.handle.x) > 1) {
-          const startX = this.handle.x;
           this.tweens.add({
             targets: this.handle,
             x: targetX,
@@ -275,8 +271,8 @@ export class GuessingScene extends Phaser.Scene {
       this.valueText.setText(`${this.currentValue}`);
 
       // Create burst effect on click
-      const clickLeft = this.spectrumColorLeft ?? colors.particles.secondary;
-      const clickRight = this.spectrumColorRight ?? colors.particles.tertiary;
+      const clickLeft = this.spectrumColorLeft?.toString() ?? colors.particles.secondary;
+      const clickRight = this.spectrumColorRight?.toString() ?? colors.particles.tertiary;
       this.particleManager.createOrganicBurst(clampedX, this.handle.y, {
         colors: [clickLeft, clickRight],
         count: 14,
@@ -295,11 +291,6 @@ export class GuessingScene extends Phaser.Scene {
       this.handle.setX(clampedX);
       this.currentValue = this.positionToValue(clampedX, left, right);
       this.valueText.setText(`${this.currentValue}`);
-
-      // Update particle trail position during drag
-      if (this.trailEffectId && this.isDragging) {
-        this.particleManager.updateTrailPosition(this.trailEffectId, clampedX, this.handle.y);
-      }
 
       this.layout();
       this.emitValueChanged(this.currentValue);
@@ -328,8 +319,8 @@ export class GuessingScene extends Phaser.Scene {
       this.valueText.setText(`${this.currentValue}`);
       this.layout();
 
-      const burstLeft = this.spectrumColorLeft ?? colors.particles.secondary;
-      const burstRight = this.spectrumColorRight ?? colors.particles.trail;
+      const burstLeft = this.spectrumColorLeft?.toString() ?? colors.particles.secondary;
+      const burstRight = this.spectrumColorRight?.toString() ?? colors.particles.trail;
       this.particleManager.createOrganicBurst(x, this.handle.y, {
         colors: [burstLeft, burstRight],
         count: 10,
@@ -389,7 +380,7 @@ export class GuessingScene extends Phaser.Scene {
       this.jitterAmp = reducedMotion ? 0 : 0.5;
 
       if (reducedMotion) {
-        this.tweens.add({
+        this.medianTimeline = this.tweens.add({
           targets: driver,
           x: targetX,
           duration: d1,
@@ -398,19 +389,66 @@ export class GuessingScene extends Phaser.Scene {
           onComplete: () => {
             this.medianAnimatedX = targetX;
             this.jitterAmp = 0;
+            this.medianTimeline = null;
           },
         });
       } else {
-        const tl = this.tweens.createTimeline();
-        tl.add({ targets: driver, x: o1, duration: d1, ease: 'Cubic.easeOut', onUpdate: apply });
-        if (d2 > 0) tl.add({ targets: driver, x: o2, duration: d2, ease: 'Sine.easeInOut', onUpdate: apply });
-        if (d3 > 0) tl.add({ targets: driver, x: targetX, duration: d3, ease: 'Sine.easeOut', onUpdate: apply });
-        tl.setCallback('onComplete', () => {
-          this.medianAnimatedX = targetX;
-          this.jitterAmp = 0;
+        // Chain tweens manually since timeline API is complex
+        this.medianTimeline = this.tweens.add({
+          targets: driver,
+          x: o1,
+          duration: d1,
+          ease: 'Cubic.easeOut',
+          onUpdate: apply,
+          onComplete: () => {
+            if (d2 > 0) {
+              this.medianTimeline = this.tweens.add({
+                targets: driver,
+                x: o2,
+                duration: d2,
+                ease: 'Sine.easeInOut',
+                onUpdate: apply,
+                onComplete: () => {
+                  if (d3 > 0) {
+                    this.medianTimeline = this.tweens.add({
+                      targets: driver,
+                      x: targetX,
+                      duration: d3,
+                      ease: 'Sine.easeOut',
+                      onUpdate: apply,
+                      onComplete: () => {
+                        this.medianAnimatedX = targetX;
+                        this.jitterAmp = 0;
+                        this.medianTimeline = null;
+                      },
+                    });
+                  } else {
+                    this.medianAnimatedX = targetX;
+                    this.jitterAmp = 0;
+                    this.medianTimeline = null;
+                  }
+                },
+              });
+            } else if (d3 > 0) {
+              this.medianTimeline = this.tweens.add({
+                targets: driver,
+                x: targetX,
+                duration: d3,
+                ease: 'Sine.easeOut',
+                onUpdate: apply,
+                onComplete: () => {
+                  this.medianAnimatedX = targetX;
+                  this.jitterAmp = 0;
+                  this.medianTimeline = null;
+                },
+              });
+            } else {
+              this.medianAnimatedX = targetX;
+              this.jitterAmp = 0;
+              this.medianTimeline = null;
+            }
+          },
         });
-        this.medianTimeline = tl;
-        tl.play();
       }
     } else {
       // No previous or same value: just lay out normally
@@ -441,11 +479,9 @@ export class GuessingScene extends Phaser.Scene {
   public setConsensusData(data: {
     totalParticipants: number;
     consensusStrength: number;
-    isActive: boolean;
   }): void {
     this.totalParticipants = data.totalParticipants;
     this.consensusStrength = data.consensusStrength;
-    this.isActive = data.isActive;
     
     this.updateConsensusEffects();
   }
@@ -499,53 +535,59 @@ export class GuessingScene extends Phaser.Scene {
       const harmonyEffect = this.particleManager.createAmbientParticles(
         new Phaser.Geom.Rectangle(0, 0, width, height),
         {
-          colors: [colors.particles.primary, colors.particles.burst],
+          colors: [colors.particles.primary as string, colors.particles.burst as string],
           count: Math.floor(8 + this.totalParticipants * 0.2),
           size: { min: 4, max: 8 },
           speed: { min: 5, max: 15 },
           opacity: { min: 0.4, max: 0.7 }
         }
       );
-      this.consensusEffects.set('harmony', harmonyEffect);
+      if (harmonyEffect) {
+        this.consensusEffects.set('harmony', harmonyEffect);
+      }
       
     } else if (this.consensusStrength > 0.4) {
       // Moderate consensus - flowing convergence
       const convergenceEffect = this.particleManager.createAmbientParticles(
         new Phaser.Geom.Rectangle(0, 0, width, height),
         {
-          colors: [colors.particles.secondary, colors.particles.tertiary],
+          colors: [colors.particles.secondary as string, colors.particles.tertiary as string],
           count: Math.floor(6 + this.totalParticipants * 0.15),
           size: { min: 3, max: 6 },
           speed: { min: 8, max: 20 },
           opacity: { min: 0.3, max: 0.6 }
         }
       );
-      this.consensusEffects.set('convergence', convergenceEffect);
+      if (convergenceEffect) {
+        this.consensusEffects.set('convergence', convergenceEffect);
+      }
       
     } else if (this.totalParticipants > 0) {
       // Low consensus - chaotic exploration
       const chaosEffect = this.particleManager.createAmbientParticles(
         new Phaser.Geom.Rectangle(0, 0, width, height),
         {
-          colors: [colors.particles.trail, colors.decorative.mist],
+          colors: [colors.particles.trail as string, colors.decorative.dots as string],
           count: Math.floor(4 + this.totalParticipants * 0.1),
           size: { min: 2, max: 5 },
           speed: { min: 15, max: 35 },
           opacity: { min: 0.2, max: 0.4 }
         }
       );
-      this.consensusEffects.set('chaos', chaosEffect);
+      if (chaosEffect) {
+        this.consensusEffects.set('chaos', chaosEffect);
+      }
     }
   }
 
   /**
    * Create ripple effect for new participant
    */
-  private createRippleEffect(startX: number, startY: number, targetX: number): void {
-    const rippleColors = [colors.particles.secondary, colors.particles.tertiary];
+  private createRippleEffect(_startX: number, startY: number, targetX: number): void {
+    const rippleColors = [colors.particles.secondary as string, colors.particles.tertiary as string];
     
     // Create expanding ring effect
-    const ringEffect = this.particleManager.createOrganicBurst(startX, startY, {
+    const ringEffect = this.particleManager.createOrganicBurst(_startX, startY, {
       colors: rippleColors,
       count: 12,
       duration: 800,
@@ -554,16 +596,18 @@ export class GuessingScene extends Phaser.Scene {
     });
     
     // Animate toward center
-    this.tweens.add({
-      targets: { x: startX },
-      x: targetX,
-      duration: 600,
-      ease: 'Quad.easeOut',
-      onUpdate: (tween) => {
-        const currentX = tween.getValue();
-        this.particleManager.updateTrailPosition(ringEffect, currentX, startY);
-      }
-    });
+    if (ringEffect) {
+      this.tweens.add({
+        targets: { x: _startX },
+        x: targetX,
+        duration: 600,
+        ease: 'Quad.easeOut',
+        onUpdate: (tween) => {
+          const currentX = tween.getValue();
+          this.particleManager.updateTrailPosition(ringEffect, currentX, startY);
+        }
+      });
+    }
   }
 
   /**
@@ -580,7 +624,7 @@ export class GuessingScene extends Phaser.Scene {
     });
     
     // Screen flash effect
-    this.cameras.main.flash(200, 255, 215, 0, false);
+    this.cameras.main.flash(200, 255, 215, 0);
   }
 
   /**
@@ -609,16 +653,8 @@ export class GuessingScene extends Phaser.Scene {
       });
     });
     
-    // Golden screen tint
-    this.cameras.main.setTint(0xffd700);
-    this.tweens.add({
-      targets: this.cameras.main,
-      alpha: { from: 0.9, to: 1 },
-      duration: 1000,
-      onComplete: () => {
-        this.cameras.main.clearTint();
-      }
-    });
+    // Golden screen tint effect
+    this.cameras.main.flash(1000, 255, 215, 0);
   }
 
   private valueToPosition(value: number, left: number, right: number): number {
@@ -774,7 +810,7 @@ export class GuessingScene extends Phaser.Scene {
     }
   }
 
-  update(time: number): void {
+  override update(time: number): void {
     // Organic shimmer for median line/text
     if (this.currentMedian != null) {
       const shimmer = 0.85 + 0.15 * Math.sin(time * 0.003);
@@ -807,7 +843,7 @@ export class GuessingScene extends Phaser.Scene {
     const bounds = new Phaser.Geom.Rectangle(0, 0, width, height);
 
     this.ambientEffectId = this.particleManager.createAmbientParticles(bounds, {
-      colors: [colors.particles.trail, colors.decorative.dots],
+      colors: [colors.particles.trail as string, colors.decorative.dots as string],
       count: 15,
       size: { min: 2, max: 6 },
       speed: { min: 5, max: 15 },

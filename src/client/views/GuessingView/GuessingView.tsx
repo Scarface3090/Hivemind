@@ -9,6 +9,7 @@ import { SpectrumSlider } from '../../components/SpectrumSlider.js';
 import { SimpleConsensusCanvas } from '../../components/SimpleConsensusCanvas.js';
 import { JudgesScale } from '../../components/JudgesScale.js';
 import ParticleOverlay, { type ParticleOverlayHandle } from '../../components/ParticleOverlay.js';
+import { BrushStrokeToggle } from '../../components/BrushStrokeToggle.js';
 import { useCountdown } from '../../hooks/useCountdown.js';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -21,13 +22,24 @@ const GuessingView = (): JSX.Element => {
   const [currentValue, setCurrentValue] = useState<number>(50);
   const [showJustification, setShowJustification] = useState<boolean>(true);
   const [isJustificationFocused, setIsJustificationFocused] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
+
+  // Track page visibility to optimize polling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const { data, isLoading, error, isFetching } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
     queryFn: () => getGameById(gameId!),
     enabled: !!gameId,
-    refetchInterval: 2000, // 2 seconds for near real-time updates (faster than default)
-    refetchIntervalInBackground: true, // Continue polling even when tab is not active
+    refetchInterval: isVisible ? 5000 : 30000, // 5s when visible, 30s when hidden
+    refetchIntervalInBackground: false, // Stop background polling to save battery
   });
 
   const [submissionFeedback, setSubmissionFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(
@@ -357,73 +369,12 @@ const GuessingView = (): JSX.Element => {
         )}
 
         <form className="guess-form" onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-          <div className="toggle-group" style={{ marginBottom: 16 }}>
-            <label
-              className="toggle-label"
-              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}
-            >
-              <input
-                type="checkbox"
-                checked={showJustification}
-                onChange={(e) => setShowJustification(e.target.checked)}
-                aria-label="Enable justification input"
-                style={{
-                  // Visually hide but keep accessible
-                  position: 'absolute',
-                  opacity: 0,
-                  width: 1,
-                  height: 1,
-                  overflow: 'hidden',
-                }}
-              />
-              <span
-                aria-hidden
-                style={{
-                  position: 'relative',
-                  width: 54,
-                  height: 30,
-                  borderRadius: 22,
-                  background: showJustification
-                    ? 'linear-gradient(135deg, rgba(255,215,0,0.9), rgba(255,165,0,0.8))'
-                    : 'linear-gradient(135deg, rgba(80,80,80,0.6), rgba(50,50,50,0.6))',
-                  boxShadow: showJustification
-                    ? '0 0 0 2px rgba(255,200,0,0.25), inset 0 0 12px rgba(0,0,0,0.35)'
-                    : 'inset 0 0 12px rgba(0,0,0,0.35)',
-                  transition: 'background 220ms ease, box-shadow 220ms ease',
-                }}
-              >
-                {/* Brush-stroke texture simulation with layered pseudo strokes */}
-                <span
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: 22,
-                    background: showJustification
-                      ? 'radial-gradient(120% 100% at 0% 100%, rgba(255,255,255,0.12) 0%, transparent 60%), radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,0.08) 0%, transparent 60%)'
-                      : 'radial-gradient(120% 100% at 0% 100%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,0.04) 0%, transparent 60%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 3,
-                    left: showJustification ? 28 : 3,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 16,
-                    background: showJustification
-                      ? 'conic-gradient(from 0deg, #fff 0 20%, #ffe08a 20% 60%, #fff 60% 100%)'
-                      : 'conic-gradient(from 0deg, #eee 0 20%, #bbb 20% 60%, #eee 60% 100%)',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(0,0,0,0.25)',
-                    transform: showJustification ? 'translateX(0)' : 'translateX(0)',
-                    transition: 'left 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease',
-                  }}
-                />
-              </span>
-              <span style={{ color: '#fff', fontSize: '14px' }}>Influence the Hivemind</span>
-            </label>
-          </div>
+          <BrushStrokeToggle
+            checked={showJustification}
+            onChange={setShowJustification}
+            label="Influence the Hivemind"
+            ariaLabel="Enable justification input"
+          />
 
           <div
             className="justification-group"

@@ -56,7 +56,7 @@ export const JudgesScale = ({
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
       
-      // Smooth easing with slight overshoot for realistic needle movement
+      // Smooth cubic ease-in-out for needle movement
       const eased = progress < 0.5 
         ? 2 * progress * progress 
         : 1 - Math.pow(-2 * progress + 2, 3) / 2;

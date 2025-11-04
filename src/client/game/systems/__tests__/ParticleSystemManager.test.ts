@@ -92,6 +92,7 @@ describe('ParticleSystemManager', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEmitters.length = 0; // Clear the emitters array for test isolation
     particleManager = new ParticleSystemManager(mockScene as any);
   });
 

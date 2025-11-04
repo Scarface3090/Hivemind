@@ -33,6 +33,7 @@ export const EnhancedSpectrumSlider = ({
   const sceneCleanupRef = useRef<(() => void) | null>(null);
   const latestMedianRef = useRef<number | null | undefined>(median);
   const latestParticipantsRef = useRef<number>(totalParticipants);
+  const prevMedianRef = useRef<number | null | undefined>(median);
   
   // Enhanced state tracking
   const [consensusStrength, setConsensusStrength] = useState<number>(0);
@@ -61,13 +62,18 @@ export const EnhancedSpectrumSlider = ({
       setConsensusStrength(0);
     }
     
+    let timer: NodeJS.Timeout | undefined;
     // Detect new participants for activity effects
     if (totalParticipants > prevParticipantsRef.current) {
       setIsActive(true);
-      setTimeout(() => setIsActive(false), 2000); // Activity indicator for 2 seconds
+      timer = setTimeout(() => setIsActive(false), 2000); // Activity indicator for 2 seconds
     }
     
     prevParticipantsRef.current = totalParticipants;
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [totalParticipants, median]);
 
   useEffect(() => {
@@ -79,14 +85,25 @@ export const EnhancedSpectrumSlider = ({
 
     const startScene = () => {
       if (!game.scene.isActive('GuessingScene')) {
+        // Compute consensus strength synchronously to avoid race condition
+        const currentMedian = latestMedianRef.current;
+        const currentParticipants = latestParticipantsRef.current;
+        let computedConsensusStrength = 0;
+        
+        if (currentMedian !== null && currentParticipants > 0) {
+          const participantFactor = Math.min(1, currentParticipants / 20);
+          const stabilityFactor = 0.8; // Would be calculated from median history in real implementation
+          computedConsensusStrength = participantFactor * stabilityFactor;
+        }
+        
         game.scene.start('GuessingScene', {
           initialValue: value,
-          median: latestMedianRef.current ?? null,
+          median: currentMedian ?? null,
           leftLabel: spectrum.leftLabel,
           rightLabel: spectrum.rightLabel,
           // Enhanced data for consensus effects
-          totalParticipants: latestParticipantsRef.current,
-          consensusStrength: consensusStrength,
+          totalParticipants: currentParticipants,
+          consensusStrength: computedConsensusStrength,
           isActive: isActive
         });
       }
@@ -169,13 +186,15 @@ export const EnhancedSpectrumSlider = ({
           triggerConsensusEffect?: (type: 'medianShift') => void;
         };
         
-        const prevMedian = latestMedianRef.current;
+        const prevMedian = prevMedianRef.current;
         scene?.setMedian?.(median ?? null);
         
         // Trigger median shift effect if significant change
         if (prevMedian !== null && median !== null && typeof prevMedian === 'number' && typeof median === 'number' && Math.abs(prevMedian - median) > 5) {
           scene?.triggerConsensusEffect?.('medianShift');
         }
+        
+        prevMedianRef.current = median;
       } catch {
         game.events.once(Phaser.Core.Events.POST_STEP, applyMedian);
       }
@@ -289,8 +308,15 @@ export const EnhancedSpectrumSlider = ({
     }
 
     // Activity pulse effect
-    if (isActive) {
+    if (isActive && !disabled) {
       baseStyle.animation = 'consensus-pulse 2s ease-out';
+    }
+
+    // Disabled state styling
+    if (disabled) {
+      baseStyle.opacity = 0.5;
+      baseStyle.pointerEvents = 'none';
+      baseStyle.filter = 'grayscale(50%)';
     }
 
     return baseStyle;

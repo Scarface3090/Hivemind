@@ -26,6 +26,7 @@ interface AnimatedBucket {
   height: number;
   targetHeight: number;
   animationProgress: number;
+  initialHeight?: number;
 }
 
 /**
@@ -80,9 +81,9 @@ export const SimpleConsensusCanvas = ({
       const bucketCenter = (i + 0.5) * 10; // 5, 15, 25, ..., 95
       const distance = Math.abs(bucketCenter - median);
       
-      // Normal distribution around median with some randomness for realism
+      // Normal distribution around median with deterministic jitter for stable animations
       const baseHeight = Math.exp(-Math.pow(distance / 20, 2)) * totalParticipants * 0.3;
-      const jitter = (Math.random() - 0.5) * 0.15; // Reduced jitter for smoother animation
+      const jitter = (Math.sin(i * 2.5 + median * 0.1) * 0.5) * 0.15; // Deterministic jitter based on bucket position
       const targetHeight = Math.max(0.1, baseHeight + jitter);
       
       distribution.push({
@@ -96,38 +97,50 @@ export const SimpleConsensusCanvas = ({
     return distribution;
   };
 
-  // Real-time animation system
+  // Real-time animation system with pure lerp
   const animateDistribution = () => {
     const now = Date.now();
     const deltaTime = now - lastUpdateTimeRef.current;
     lastUpdateTimeRef.current = now;
     
     setAnimatedDistribution(prev => {
-      let hasChanges = false;
+      let hasActiveAnimations = false;
       const updated = prev.map(bucket => {
-        const diff = bucket.targetHeight - bucket.height;
+        // Skip if animation is already complete
+        if (bucket.animationProgress >= 1) {
+          return bucket;
+        }
         
-        if (Math.abs(diff) > 0.01) {
-          hasChanges = true;
-          // Fast animation for real-time feel (200ms total duration)
-          const animationSpeed = 0.008 * deltaTime; // Adjust speed based on frame time
-          const newProgress = Math.min(1, bucket.animationProgress + animationSpeed);
-          
-          // Smooth easing function
-          const eased = 1 - Math.pow(1 - newProgress, 3);
-          const newHeight = bucket.height + diff * eased * 0.1; // Incremental update
-          
+        hasActiveAnimations = true;
+        
+        // Increment animation progress based on deltaTime
+        const animationSpeed = 0.008 * deltaTime; // Adjust speed based on frame time
+        const newProgress = Math.min(1, bucket.animationProgress + animationSpeed);
+        
+        // Smooth easing function (cubic ease-out)
+        const eased = 1 - Math.pow(1 - newProgress, 3);
+        
+        // Pure lerp from initial height to target height
+        const initialHeight = bucket.initialHeight || 0;
+        const newHeight = initialHeight + (bucket.targetHeight - initialHeight) * eased;
+        
+        // When animation is complete, ensure exact target height
+        if (newProgress >= 1) {
           return {
             ...bucket,
-            height: newHeight,
-            animationProgress: newProgress
+            height: bucket.targetHeight,
+            animationProgress: 1
           };
         }
         
-        return bucket;
+        return {
+          ...bucket,
+          height: newHeight,
+          animationProgress: newProgress
+        };
       });
       
-      if (hasChanges) {
+      if (hasActiveAnimations) {
         // Continue animation
         animationFrameRef.current = requestAnimationFrame(animateDistribution);
       } else {
@@ -148,7 +161,8 @@ export const SimpleConsensusCanvas = ({
       if (prev.length !== newTargetDistribution.length) {
         return newTargetDistribution.map(bucket => ({
           ...bucket,
-          height: bucket.targetHeight * 0.1, // Start from small height
+          height: 0, // Start from zero height
+          initialHeight: 0,
           animationProgress: 0
         }));
       }
@@ -157,9 +171,15 @@ export const SimpleConsensusCanvas = ({
       return prev.map((bucket, index) => ({
         ...bucket,
         targetHeight: newTargetDistribution[index]?.targetHeight || 0,
+        initialHeight: bucket.height, // Store current height as initial for smooth transition
         animationProgress: 0 // Reset animation progress for new target
       }));
     });
+    
+    // Cancel any existing animation
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
     
     // Start animation
     if (!isAnimating) {
@@ -173,7 +193,7 @@ export const SimpleConsensusCanvas = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [median, totalParticipants]); // Update when median or participant count changes
+  }, [median, totalParticipants, isAnimating]); // Update when median or participant count changes
 
   // Cleanup animation on unmount
   useEffect(() => {
@@ -280,7 +300,7 @@ export const SimpleConsensusCanvas = ({
             right: '12px',
             height: '20px',
             display: 'flex',
-            alignItems: 'end',
+            alignItems: 'flex-end',
             gap: '2px'
           }}
         >
