@@ -229,34 +229,45 @@ export const JudgesScale = ({
           />
         </svg>
         
-        {/* Spectrum labels with better visibility */}
+        {/* Spectrum labels positioned at arc boundaries */}
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: '240px',
-          fontSize: '13px',
-          fontWeight: 'bold',
-          marginTop: '5px'
+          position: 'relative',
+          width: '280px',
+          height: '30px',
+          marginTop: '-45px'
         }}>
+          {/* Left label - positioned at left arc boundary (x=80 in SVG = 80/280 = 28.57%) */}
           <span style={{ 
-            textAlign: 'left',
+            position: 'absolute',
+            left: 'calc(28.57% - 0px)', // Arc starts at x=80, centered on boundary
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
             color: speedometerColors.text,
             background: 'rgba(0,0,0,0.6)',
             padding: '4px 8px',
             borderRadius: '6px',
-            border: `1px solid ${speedometerColors.red}60`
+            border: `1px solid ${speedometerColors.red}60`,
+            fontSize: '13px',
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap'
           }}>
             {leftLabel}
           </span>
+          
+          {/* Right label - positioned at right arc boundary (x=200 in SVG = 200/280 = 71.43%) */}
           <span style={{ 
-            textAlign: 'right',
+            position: 'absolute',
+            left: 'calc(71.43% - 0px)', // Arc ends at x=200, centered on boundary
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
             color: speedometerColors.text,
             background: 'rgba(0,0,0,0.6)',
             padding: '4px 8px',
             borderRadius: '6px',
-            border: `1px solid ${speedometerColors.green}60`
+            border: `1px solid ${speedometerColors.green}60`,
+            fontSize: '13px',
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap'
           }}>
             {rightLabel}
           </span>
