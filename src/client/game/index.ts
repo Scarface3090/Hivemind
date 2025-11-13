@@ -16,7 +16,7 @@ export interface CreateGameOptions {
   bridge?: SliderBridge;
 }
 
-export const createPhaserGame = ({ parent, width = 1024, height = 768 }: CreateGameOptions): Phaser.Game => {
+export const createPhaserGame = ({ parent, width = 800, height = 96 }: CreateGameOptions): Phaser.Game => {
   const parentElement =
     typeof parent === 'string' ? document.querySelector<HTMLElement>(parent) : parent ?? undefined;
 
@@ -36,10 +36,11 @@ export const createPhaserGame = ({ parent, width = 1024, height = 768 }: CreateG
     type: Phaser.AUTO,
     backgroundColor: '#111111',
     scale: {
-      mode: Phaser.Scale.RESIZE,
+      mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
       width: initialWidth,
       height: initialHeight,
+      parent: parentElement,
     },
     parent: parentElement,
     scene: [PreloaderScene, GuessingScene, ConsensusVisualizationScene],
