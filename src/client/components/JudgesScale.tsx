@@ -121,7 +121,7 @@ export const JudgesScale = ({
 
   // Generate target guess distribution for histogram animation
   const generateTargetDistribution = (): AnimatedBucket[] => {
-    if (!median || totalParticipants === 0) {
+    if (median === null || median === undefined || totalParticipants === 0) {
       return Array.from({ length: 10 }, (_, i) => ({
         position: i * 10,
         height: 0,
@@ -236,7 +236,7 @@ export const JudgesScale = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [median, totalParticipants, isAnimating]);
+  }, [median, totalParticipants]);
 
   // Cleanup animation on unmount
   useEffect(() => {
@@ -491,15 +491,19 @@ export const JudgesScale = ({
           <div style={{
             fontSize: '16px',
             color: speedometerColors.text,
+            WebkitTextFillColor: speedometerColors.text,
             fontWeight: 'bold',
-            marginBottom: '6px'
+            marginBottom: '6px',
+            colorScheme: 'dark'
           }}>
             Hivemind Verdict: {Math.round(animatedMedian)}
           </div>
           <div style={{
             fontSize: '12px',
             color: speedometerColors.yellow,
-            fontWeight: 'bold'
+            WebkitTextFillColor: speedometerColors.yellow,
+            fontWeight: 'bold',
+            colorScheme: 'dark'
           }}>
             {animatedMedian < 30 ? `← Leans toward ${leftLabel}` :
              animatedMedian > 70 ? `→ Leans toward ${rightLabel}` :

@@ -51,7 +51,6 @@ export const EnhancedSpectrumSlider = ({
   const [consensusStrength, setConsensusStrength] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const prevParticipantsRef = useRef<number>(0);
-  const prevParticipantsForEffectRef = useRef<number>(0); // Separate ref for consensus effect detection
 
   // Keep the latest callback without retriggering game creation
   useEffect(() => {
@@ -226,10 +225,9 @@ export const EnhancedSpectrumSlider = ({
           isActive: isActive
         });
         
-        // Trigger effects based on consensus state - use separate ref for detection
-        if (isActive && totalParticipants > prevParticipantsForEffectRef.current) {
+        // Trigger effects based on consensus state
+        if (isActive) {
           scene?.triggerConsensusEffect?.('newParticipant');
-          prevParticipantsForEffectRef.current = totalParticipants; // Update only after triggering effect
         }
         
         if (consensusStrength > 0.8) {

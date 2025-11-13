@@ -103,6 +103,7 @@ export const BrushStrokeButton: React.FC<BrushStrokeButtonProps> = ({
         handleClick();
       } else if (e.key === 'Enter') {
         setIsPressed(false);
+        handleClick();
       }
     },
     [disabled, handleClick]

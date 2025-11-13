@@ -244,7 +244,11 @@ export const SimpleConsensusCanvas = ({
           {consensusState.icon} {consensusState.label}
         </span>
         {median !== null && (
-          <span style={{ color: consensusColors.secondary }}>
+          <span style={{ 
+            color: consensusColors.secondary,
+            WebkitTextFillColor: consensusColors.secondary,
+            colorScheme: 'dark'
+          }}>
             Hivemind Verdict: {median}
           </span>
         )}

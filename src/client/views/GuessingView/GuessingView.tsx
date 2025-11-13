@@ -308,15 +308,27 @@ const GuessingView = (): JSX.Element => {
                 textAlign: 'center'
               }}>
                 {Math.abs(currentValue - data.median.median) <= 5 ? (
-                  <span style={{ color: '#00ff88' }}>
+                  <span style={{ 
+                    color: '#00ff88',
+                    WebkitTextFillColor: '#00ff88',
+                    colorScheme: 'dark'
+                  }}>
                     🎯 You're aligned with the hivemind verdict! (within 5 points)
                   </span>
                 ) : currentValue < data.median.median ? (
-                  <span style={{ color: '#ffaa00' }}>
+                  <span style={{ 
+                    color: '#ffaa00',
+                    WebkitTextFillColor: '#ffaa00',
+                    colorScheme: 'dark'
+                  }}>
                     📉 You're {data.median.median - currentValue} points below the hivemind verdict
                   </span>
                 ) : (
-                  <span style={{ color: '#ffaa00' }}>
+                  <span style={{ 
+                    color: '#ffaa00',
+                    WebkitTextFillColor: '#ffaa00',
+                    colorScheme: 'dark'
+                  }}>
                     📈 You're {currentValue - data.median.median} points above the hivemind verdict
                   </span>
                 )}
