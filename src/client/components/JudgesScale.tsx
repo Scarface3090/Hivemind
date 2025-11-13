@@ -23,8 +23,10 @@ const speedometerColors = {
   yellow: '#FFD700',       // Medium values (40-60)
   lightGreen: '#88DD44',   // Medium-high values (60-80)
   green: '#44DD44',        // High values (80-100)
-  needle: '#2C3E50',       // Dark needle
+  needle: '#FFD700',       // Bright gold needle
+  needleGlow: '#FFA500',   // Orange glow
   center: '#FFFFFF',       // White center dot
+  centerGlow: '#FFD700',   // Gold glow for center
   background: '#1a1a1a',   // Dark background
   text: '#ffffff',         // White text
   textSecondary: '#aaaaaa' // Gray text
@@ -260,6 +262,44 @@ export const JudgesScale = ({
         position: 'relative'
       }}
     >
+      {/* CSS Animations for needle and center */}
+      <style>{`
+        @keyframes needlePulse {
+          0%, 100% { 
+            opacity: 1;
+          }
+          50% { 
+            opacity: 0.85;
+          }
+        }
+        
+        @keyframes centerPulse {
+          0%, 100% { 
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% { 
+            transform: scale(1.15);
+            opacity: 0.9;
+          }
+        }
+        
+        .speedometer-needle {
+          animation: needlePulse 2s ease-in-out infinite;
+        }
+        
+        .speedometer-center {
+          animation: centerPulse 2s ease-in-out infinite;
+          transform-origin: center;
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+          .speedometer-needle,
+          .speedometer-center {
+            animation: none !important;
+          }
+        }
+      `}</style>
       {/* Header with consensus state only */}
       <div style={{
         display: 'flex',
@@ -302,6 +342,29 @@ export const JudgesScale = ({
             display: 'block'
           }}
         >
+          {/* Define glow filters for needle */}
+          <defs>
+            <filter id="needleGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+              <feFlood floodColor={speedometerColors.needleGlow} floodOpacity="0.8" />
+              <feComposite in2="blur" operator="in" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="centerGlow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+              <feFlood floodColor={speedometerColors.centerGlow} floodOpacity="0.6" />
+              <feComposite in2="blur" operator="in" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
           {/* Horizontal arc segments (0° = left, 180° = right) */}
           {/* Red segment (0-36 degrees) */}
           <path
@@ -348,30 +411,72 @@ export const JudgesScale = ({
             strokeLinecap="round"
           />
           
-          {/* Needle */}
-          {animatedMedian !== null && (
+          {/* Needle with glow effect - always visible */}
+          <g className="speedometer-needle">
+            {/* Glow layers for needle */}
+            <line
+              x1="140"
+              y1="60"
+              x2="140"
+              y2="10"
+              stroke={speedometerColors.needleGlow}
+              strokeWidth="8"
+              strokeLinecap="round"
+              transform={`rotate(${needleAngle - 90} 140 60)`}
+              style={{ transition: 'none', opacity: 0.4 }}
+            />
+            <line
+              x1="140"
+              y1="60"
+              x2="140"
+              y2="10"
+              stroke={speedometerColors.needleGlow}
+              strokeWidth="6"
+              strokeLinecap="round"
+              transform={`rotate(${needleAngle - 90} 140 60)`}
+              style={{ transition: 'none', opacity: 0.6 }}
+            />
+            {/* Main needle */}
             <line
               x1="140"
               y1="60"
               x2="140"
               y2="10"
               stroke={speedometerColors.needle}
-              strokeWidth="3"
+              strokeWidth="4"
               strokeLinecap="round"
               transform={`rotate(${needleAngle - 90} 140 60)`}
               style={{ transition: 'none' }}
             />
-          )}
+          </g>
           
-          {/* Center dot */}
-          <circle
-            cx="140"
-            cy="60"
-            r="5"
-            fill={speedometerColors.center}
-            stroke={speedometerColors.needle}
-            strokeWidth="2"
-          />
+          {/* Center dot with glow */}
+          <g className="speedometer-center">
+            {/* Glow layers for center */}
+            <circle
+              cx="140"
+              cy="60"
+              r="10"
+              fill={speedometerColors.centerGlow}
+              opacity="0.3"
+            />
+            <circle
+              cx="140"
+              cy="60"
+              r="8"
+              fill={speedometerColors.centerGlow}
+              opacity="0.5"
+            />
+            {/* Main center dot */}
+            <circle
+              cx="140"
+              cy="60"
+              r="6"
+              fill={speedometerColors.center}
+              stroke={speedometerColors.needle}
+              strokeWidth="2"
+            />
+          </g>
         </svg>
         
         {/* Spectrum labels positioned at arc boundaries - fixed 5px below SVG */}
