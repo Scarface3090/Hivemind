@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface JudgesScaleProps {
   median: number | null;
@@ -6,6 +6,14 @@ interface JudgesScaleProps {
   leftLabel: string;
   rightLabel: string;
   className?: string;
+}
+
+interface AnimatedBucket {
+  position: number;
+  height: number;
+  targetHeight: number;
+  animationProgress: number;
+  initialHeight?: number;
 }
 
 // Speedometer color scheme
@@ -35,6 +43,12 @@ export const JudgesScale = ({
 }: JudgesScaleProps): JSX.Element => {
   const [animatedNeedlePosition, setAnimatedNeedlePosition] = useState<number>(0); // Start at left (0%)
   const [animatedMedian, setAnimatedMedian] = useState<number | null>(null);
+  
+  // Histogram animation state
+  const [animatedDistribution, setAnimatedDistribution] = useState<AnimatedBucket[]>([]);
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const animationFrameRef = useRef<number>();
+  const lastUpdateTimeRef = useRef<number>(Date.now());
   
   // Calculate needle position based on median (0-100 percentage for horizontal bar)
   const targetPosition = median !== null ? median : 0;
@@ -105,6 +119,134 @@ export const JudgesScale = ({
   // Calculate needle angle for horizontal arc (0° = left, 180° = right)
   const needleAngle = animatedNeedlePosition !== null ? (animatedNeedlePosition / 100) * 180 : 0;
 
+  // Generate target guess distribution for histogram animation
+  const generateTargetDistribution = (): AnimatedBucket[] => {
+    if (!median || totalParticipants === 0) {
+      return Array.from({ length: 10 }, (_, i) => ({
+        position: i * 10,
+        height: 0,
+        targetHeight: 0,
+        animationProgress: 1
+      }));
+    }
+    
+    const distribution: AnimatedBucket[] = [];
+    const buckets = 10;
+    
+    for (let i = 0; i < buckets; i++) {
+      const bucketCenter = (i + 0.5) * 10;
+      const distance = Math.abs(bucketCenter - median);
+      
+      const baseHeight = Math.exp(-Math.pow(distance / 20, 2)) * totalParticipants * 0.3;
+      const jitter = (Math.sin(i * 2.5 + median * 0.1) * 0.5) * 0.15;
+      const targetHeight = Math.max(0.1, baseHeight + jitter);
+      
+      distribution.push({
+        position: i * 10,
+        height: 0,
+        targetHeight: targetHeight,
+        animationProgress: 0
+      });
+    }
+    
+    return distribution;
+  };
+
+  // Histogram animation system
+  const animateDistribution = () => {
+    const now = Date.now();
+    const deltaTime = now - lastUpdateTimeRef.current;
+    lastUpdateTimeRef.current = now;
+    
+    setAnimatedDistribution(prev => {
+      let hasActiveAnimations = false;
+      const updated = prev.map(bucket => {
+        if (bucket.animationProgress >= 1) {
+          return bucket;
+        }
+        
+        hasActiveAnimations = true;
+        
+        const animationSpeed = 0.008 * deltaTime;
+        const newProgress = Math.min(1, bucket.animationProgress + animationSpeed);
+        const eased = 1 - Math.pow(1 - newProgress, 3);
+        
+        const initialHeight = bucket.initialHeight || 0;
+        const newHeight = initialHeight + (bucket.targetHeight - initialHeight) * eased;
+        
+        if (newProgress >= 1) {
+          return {
+            ...bucket,
+            height: bucket.targetHeight,
+            animationProgress: 1
+          };
+        }
+        
+        return {
+          ...bucket,
+          height: newHeight,
+          animationProgress: newProgress
+        };
+      });
+      
+      if (hasActiveAnimations) {
+        animationFrameRef.current = requestAnimationFrame(animateDistribution);
+      } else {
+        setIsAnimating(false);
+      }
+      
+      return updated;
+    });
+  };
+
+  // Update distribution when data changes
+  useEffect(() => {
+    const newTargetDistribution = generateTargetDistribution();
+    
+    setAnimatedDistribution(prev => {
+      if (prev.length !== newTargetDistribution.length) {
+        return newTargetDistribution.map(bucket => ({
+          ...bucket,
+          height: 0,
+          initialHeight: 0,
+          animationProgress: 0
+        }));
+      }
+      
+      return prev.map((bucket, index) => ({
+        ...bucket,
+        targetHeight: newTargetDistribution[index]?.targetHeight || 0,
+        initialHeight: bucket.height,
+        animationProgress: 0
+      }));
+    });
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    if (!isAnimating) {
+      setIsAnimating(true);
+      lastUpdateTimeRef.current = Date.now();
+      animationFrameRef.current = requestAnimationFrame(animateDistribution);
+    }
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [median, totalParticipants, isAnimating]);
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div 
       className={`speedometer-container ${className}`.trim()}
@@ -118,7 +260,7 @@ export const JudgesScale = ({
         position: 'relative'
       }}
     >
-      {/* Header with consensus state */}
+      {/* Header with consensus state only */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -130,17 +272,20 @@ export const JudgesScale = ({
         <span style={{ color: consensusState.color }}>
           {consensusState.icon} {consensusState.label}
         </span>
-        {animatedMedian !== null && (
-          <span style={{ color: speedometerColors.text }}>
-            Hivemind Verdict: {Math.round(animatedMedian)}
-          </span>
-        )}
+        <span style={{ 
+          fontSize: '11px',
+          color: speedometerColors.textSecondary,
+          background: 'rgba(0,0,0,0.3)',
+          padding: '4px 8px',
+          borderRadius: '12px'
+        }}>
+          {totalParticipants} minds connected
+        </span>
       </div>
       
       {/* Horizontal Arc Speedometer */}
       <div style={{
         position: 'relative',
-        height: '100px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -154,7 +299,7 @@ export const JudgesScale = ({
           viewBox="0 0 280 80"
           style={{ 
             overflow: 'visible',
-            marginBottom: '10px'
+            display: 'block'
           }}
         >
           {/* Horizontal arc segments (0° = left, 180° = right) */}
@@ -229,79 +374,139 @@ export const JudgesScale = ({
           />
         </svg>
         
-        {/* Spectrum labels positioned at arc boundaries */}
+        {/* Spectrum labels positioned at arc boundaries - fixed 5px below SVG */}
         <div style={{
           position: 'relative',
           width: '280px',
-          height: '30px',
-          marginTop: '-45px'
+          minHeight: '40px',
+          marginTop: '5px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          padding: '0 20px'
         }}>
-          {/* Left label - positioned at left arc boundary (x=80 in SVG = 80/280 = 28.57%) */}
+          {/* Left label - positioned at left side */}
           <span style={{ 
-            position: 'absolute',
-            left: 'calc(28.57% - 0px)', // Arc starts at x=80, centered on boundary
-            transform: 'translateX(-50%)',
             textAlign: 'center',
             color: speedometerColors.text,
             background: 'rgba(0,0,0,0.6)',
             padding: '4px 8px',
             borderRadius: '6px',
             border: `1px solid ${speedometerColors.red}60`,
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 'bold',
-            whiteSpace: 'nowrap'
+            maxWidth: '45%',
+            wordWrap: 'break-word',
+            whiteSpace: 'normal',
+            lineHeight: '1.3'
           }}>
             {leftLabel}
           </span>
           
-          {/* Right label - positioned at right arc boundary (x=200 in SVG = 200/280 = 71.43%) */}
+          {/* Right label - positioned at right side */}
           <span style={{ 
-            position: 'absolute',
-            left: 'calc(71.43% - 0px)', // Arc ends at x=200, centered on boundary
-            transform: 'translateX(-50%)',
             textAlign: 'center',
             color: speedometerColors.text,
             background: 'rgba(0,0,0,0.6)',
             padding: '4px 8px',
             borderRadius: '6px',
             border: `1px solid ${speedometerColors.green}60`,
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 'bold',
-            whiteSpace: 'nowrap'
+            maxWidth: '45%',
+            wordWrap: 'break-word',
+            whiteSpace: 'normal',
+            lineHeight: '1.3'
           }}>
             {rightLabel}
           </span>
         </div>
+
+        {/* Guess Distribution Histogram - Dedicated space below speedometer */}
+        {animatedDistribution.length > 0 && totalParticipants > 0 && (
+          <div
+            style={{
+              position: 'relative',
+              width: '280px',
+              height: '70px',
+              marginTop: '20px',
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: '3px',
+              padding: '0 20px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              paddingTop: '10px'
+            }}
+          >
+            {(() => {
+              // Normalize heights to fit within container
+              const maxHeight = Math.max(...animatedDistribution.map(b => b.height), 0.1);
+              const containerHeight = 60; // Leave 10px for padding
+              
+              return animatedDistribution.map((bucket, index) => {
+                // Normalize to 0-1 range, then scale to container height
+                const normalizedHeight = bucket.height / maxHeight;
+                const heightPx = Math.max(3, normalizedHeight * containerHeight);
+                const intensity = normalizedHeight;
+                
+                const isActive = bucket.animationProgress < 1;
+                const baseColor = intensity > 0.7 ? speedometerColors.yellow : 
+                                 intensity > 0.4 ? speedometerColors.lightGreen : 
+                                 speedometerColors.orange;
+                
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      height: `${heightPx}px`,
+                      maxHeight: `${containerHeight}px`,
+                      background: isActive 
+                        ? `linear-gradient(to top, ${baseColor}90, ${baseColor}70)` 
+                        : `linear-gradient(to top, ${baseColor}70, ${baseColor}50)`,
+                      borderRadius: '3px',
+                      transition: 'none',
+                      boxShadow: isActive ? `0 0 6px ${baseColor}50` : 'none',
+                      transform: isActive ? 'scaleY(1.05)' : 'scaleY(1)',
+                      transformOrigin: 'bottom',
+                      overflow: 'hidden'
+                    }}
+                    title={`${bucket.position}-${bucket.position + 10}: ${Math.round(bucket.height)} guesses`}
+                  />
+                );
+              });
+            })()}
+          </div>
+        )}
       </div>
       
-      {/* Direction indicator */}
+      {/* Hivemind Verdict and Direction - Below histogram */}
       {animatedMedian !== null && (
         <div style={{
           textAlign: 'center',
-          marginTop: '8px',
-          fontSize: '12px',
-          color: speedometerColors.yellow,
-          fontWeight: 'bold'
+          marginTop: '12px',
+          paddingTop: '12px',
+          borderTop: '1px solid rgba(255,255,255,0.1)'
         }}>
-          {animatedMedian < 30 ? `← Hivemind leans toward ${leftLabel}` :
-           animatedMedian > 70 ? `→ Hivemind leans toward ${rightLabel}` :
-           '↕ Hivemind is balanced'}
+          <div style={{
+            fontSize: '16px',
+            color: speedometerColors.text,
+            fontWeight: 'bold',
+            marginBottom: '6px'
+          }}>
+            Hivemind Verdict: {Math.round(animatedMedian)}
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: speedometerColors.yellow,
+            fontWeight: 'bold'
+          }}>
+            {animatedMedian < 30 ? `← Leans toward ${leftLabel}` :
+             animatedMedian > 70 ? `→ Leans toward ${rightLabel}` :
+             '↕ Hivemind is balanced'}
+          </div>
         </div>
       )}
-      
-      {/* Participant count */}
-      <div style={{
-        position: 'absolute',
-        top: '8px',
-        right: '12px',
-        fontSize: '11px',
-        color: speedometerColors.textSecondary,
-        background: 'rgba(0,0,0,0.3)',
-        padding: '4px 8px',
-        borderRadius: '12px'
-      }}>
-        {totalParticipants} minds connected
-      </div>
     </div>
   );
 };

@@ -6,7 +6,6 @@ import type { GamePollingResponse, GuessResponse } from '../../../shared/api.js'
 import { MAX_GUESS_VALUE, MIN_GUESS_VALUE } from '../../../shared/constants.js';
 import { ApiError } from '../../api/client.js';
 import { SpectrumSlider } from '../../components/SpectrumSlider.js';
-import { SimpleConsensusCanvas } from '../../components/SimpleConsensusCanvas.js';
 import { JudgesScale } from '../../components/JudgesScale.js';
 import ParticleOverlay, { type ParticleOverlayHandle } from '../../components/ParticleOverlay.js';
 import { BrushStrokeToggle } from '../../components/BrushStrokeToggle.js';
@@ -34,7 +33,7 @@ const GuessingView = (): JSX.Element => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  const { data, isLoading, error, isFetching } = useQuery<GamePollingResponse>({
+  const { data, isLoading, error } = useQuery<GamePollingResponse>({
     queryKey: ['game', gameId],
     queryFn: () => getGameById(gameId!),
     enabled: !!gameId,
@@ -276,7 +275,7 @@ const GuessingView = (): JSX.Element => {
 
         </header>
 
-        {/* Real-time Speedometer - Prominent Position */}
+        {/* Unified Hivemind Consensus Display */}
         {game?.spectrum && (
           <JudgesScale
             median={data?.median?.median ?? null}
@@ -285,48 +284,6 @@ const GuessingView = (): JSX.Element => {
             rightLabel={game.spectrum.rightLabel}
             className="speedometer-main"
           />
-        )}
-
-        {/* Hivemind Activity Visualization */}
-        {game?.spectrum && (
-          <div className="hivemind-visualization" style={{ marginBottom: '20px', position: 'relative' }}>
-            <SimpleConsensusCanvas
-              median={data?.median?.median ?? null}
-              totalParticipants={game.totalParticipants}
-              className="consensus-overlay"
-            />
-            
-            {/* Real-time data indicator */}
-            {isFetching && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '4px',
-                  left: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '10px',
-                  color: '#00ff88',
-                  background: 'rgba(0,0,0,0.6)',
-                  padding: '2px 6px',
-                  borderRadius: '8px',
-                  zIndex: 10
-                }}
-              >
-                <div
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    background: '#00ff88',
-                    animation: 'pulse 1s ease-in-out infinite'
-                  }}
-                />
-                Live
-              </div>
-            )}
-          </div>
         )}
 
         {/* Spectrum slider with live feedback */}
