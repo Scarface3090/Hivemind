@@ -67,20 +67,28 @@ export const EnhancedSpectrumSlider = ({
     
     // Calculate consensus strength based on participants and median stability
     setConsensusStrength(calculateConsensusStrength(median, totalParticipants));
-    
+  }, [totalParticipants, median]);
+
+  // Separate effect to detect new participants - only triggers on totalParticipants change
+  useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
+    
     // Detect new participants for activity effects
-    if (totalParticipants > prevParticipantsRef.current) {
+    // Only trigger if participants actually increased AND we're not already active
+    if (totalParticipants > prevParticipantsRef.current && !isActive) {
       setIsActive(true);
       timer = setTimeout(() => setIsActive(false), 2000); // Activity indicator for 2 seconds
+      // Update ref only after triggering the effect
+      prevParticipantsRef.current = totalParticipants;
+    } else if (totalParticipants <= prevParticipantsRef.current) {
+      // Update ref if participants decreased or stayed the same (no trigger needed)
+      prevParticipantsRef.current = totalParticipants;
     }
-    
-    prevParticipantsRef.current = totalParticipants;
     
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [totalParticipants, median]);
+  }, [totalParticipants, isActive]);
 
   useEffect(() => {
     const mountTarget = canvasRef.current;
@@ -225,10 +233,8 @@ export const EnhancedSpectrumSlider = ({
           isActive: isActive
         });
         
-        // Trigger effects based on consensus state
-        if (isActive) {
-          scene?.triggerConsensusEffect?.('newParticipant');
-        }
+        // Only trigger newParticipant effect when isActive becomes true (not on every isActive=true render)
+        // The isActive state is managed by the separate effect above that checks actual participant increases
         
         if (consensusStrength > 0.8) {
           scene?.triggerConsensusEffect?.('strongConsensus');
@@ -241,6 +247,24 @@ export const EnhancedSpectrumSlider = ({
 
     applyConsensusData();
   }, [totalParticipants, consensusStrength, isActive]);
+
+  // Separate effect to trigger newParticipant visual effect only when isActive transitions to true
+  const prevIsActiveRef = useRef<boolean>(false);
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game) return;
+
+    // Only trigger when isActive transitions from false to true
+    if (isActive && !prevIsActiveRef.current) {
+      const scene = game.scene.getScene('GuessingScene') as Phaser.Scene & {
+        triggerConsensusEffect?: (type: 'newParticipant' | 'strongConsensus') => void;
+      };
+      
+      scene?.triggerConsensusEffect?.('newParticipant');
+    }
+    
+    prevIsActiveRef.current = isActive;
+  }, [isActive]);
 
   // Update labels when spectrum changes
   useEffect(() => {

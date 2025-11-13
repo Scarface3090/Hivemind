@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useId } from 'react';
 
 interface JudgesScaleProps {
   median: number | null;
@@ -43,6 +43,7 @@ export const JudgesScale = ({
   rightLabel,
   className = '' 
 }: JudgesScaleProps): JSX.Element => {
+  const uniqueId = useId();
   const [animatedNeedlePosition, setAnimatedNeedlePosition] = useState<number>(0); // Start at left (0%)
   const [animatedMedian, setAnimatedMedian] = useState<number | null>(null);
   
@@ -344,7 +345,7 @@ export const JudgesScale = ({
         >
           {/* Define glow filters for needle */}
           <defs>
-            <filter id="needleGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <filter id={`needleGlow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
               <feFlood floodColor={speedometerColors.needleGlow} floodOpacity="0.8" />
               <feComposite in2="blur" operator="in" result="glow" />
@@ -354,7 +355,7 @@ export const JudgesScale = ({
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <filter id="centerGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <filter id={`centerGlow-${uniqueId}`} x="-100%" y="-100%" width="300%" height="300%">
               <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
               <feFlood floodColor={speedometerColors.centerGlow} floodOpacity="0.6" />
               <feComposite in2="blur" operator="in" result="glow" />
