@@ -84,8 +84,8 @@ export const BrushStrokeButton: React.FC<BrushStrokeButtonProps> = ({
       if (disabled) return;
       
       if (e.key === 'Enter') {
+        e.preventDefault();
         setIsPressed(true);
-        handleClick();
       } else if (e.key === ' ') {
         e.preventDefault(); // Prevent page scroll
         setIsPressed(true);

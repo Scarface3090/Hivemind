@@ -205,7 +205,7 @@ export const AtmosphericEffects = ({
       initialLife: particleConfig.life
     };
     
-    setParticles(prev => [...prev.slice(-particleConfig.maxCount), particle]);
+    setParticles(prev => [...prev.slice(-(particleConfig.maxCount - 1)), particle]);
   }, [getMoodParticleConfig]);
 
   /**

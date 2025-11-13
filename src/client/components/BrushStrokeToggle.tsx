@@ -73,7 +73,6 @@ export const BrushStrokeToggle: React.FC<BrushStrokeToggleProps> = ({
                 ? 'conic-gradient(from 0deg, #fff 0 20%, #ffe08a 20% 60%, #fff 60% 100%)'
                 : 'conic-gradient(from 0deg, #eee 0 20%, #bbb 20% 60%, #eee 60% 100%)',
               boxShadow: '0 2px 6px rgba(0,0,0,0.35), inset 0 0 6px rgba(0,0,0,0.25)',
-              transform: checked ? 'translateX(0)' : 'translateX(0)',
               transition: 'left 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease',
             }}
           />

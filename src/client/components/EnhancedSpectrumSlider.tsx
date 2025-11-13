@@ -15,6 +15,18 @@ interface EnhancedSpectrumSliderProps {
 }
 
 /**
+ * Calculate consensus strength based on participants and median stability
+ */
+const calculateConsensusStrength = (median: number | null | undefined, participants: number): number => {
+  if (median !== null && participants > 0) {
+    const participantFactor = Math.min(1, participants / 20);
+    const stabilityFactor = 0.8; // Would be calculated from median history in real implementation
+    return participantFactor * stabilityFactor;
+  }
+  return 0;
+};
+
+/**
  * Enhanced spectrum slider with real-time hivemind visualization effects
  * Includes consensus indicators, participant activity, and atmospheric effects
  */
@@ -39,6 +51,7 @@ export const EnhancedSpectrumSlider = ({
   const [consensusStrength, setConsensusStrength] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const prevParticipantsRef = useRef<number>(0);
+  const prevParticipantsForEffectRef = useRef<number>(0); // Separate ref for consensus effect detection
 
   // Keep the latest callback without retriggering game creation
   useEffect(() => {
@@ -54,13 +67,7 @@ export const EnhancedSpectrumSlider = ({
     latestParticipantsRef.current = totalParticipants;
     
     // Calculate consensus strength based on participants and median stability
-    if (median !== null && totalParticipants > 0) {
-      const participantFactor = Math.min(1, totalParticipants / 20);
-      const stabilityFactor = 0.8; // Would be calculated from median history in real implementation
-      setConsensusStrength(participantFactor * stabilityFactor);
-    } else {
-      setConsensusStrength(0);
-    }
+    setConsensusStrength(calculateConsensusStrength(median, totalParticipants));
     
     let timer: NodeJS.Timeout | undefined;
     // Detect new participants for activity effects
@@ -88,13 +95,7 @@ export const EnhancedSpectrumSlider = ({
         // Compute consensus strength synchronously to avoid race condition
         const currentMedian = latestMedianRef.current;
         const currentParticipants = latestParticipantsRef.current;
-        let computedConsensusStrength = 0;
-        
-        if (currentMedian !== null && currentParticipants > 0) {
-          const participantFactor = Math.min(1, currentParticipants / 20);
-          const stabilityFactor = 0.8; // Would be calculated from median history in real implementation
-          computedConsensusStrength = participantFactor * stabilityFactor;
-        }
+        const computedConsensusStrength = calculateConsensusStrength(currentMedian, currentParticipants);
         
         game.scene.start('GuessingScene', {
           initialValue: value,
@@ -225,9 +226,10 @@ export const EnhancedSpectrumSlider = ({
           isActive: isActive
         });
         
-        // Trigger effects based on consensus state
-        if (isActive && totalParticipants > prevParticipantsRef.current) {
+        // Trigger effects based on consensus state - use separate ref for detection
+        if (isActive && totalParticipants > prevParticipantsForEffectRef.current) {
           scene?.triggerConsensusEffect?.('newParticipant');
+          prevParticipantsForEffectRef.current = totalParticipants; // Update only after triggering effect
         }
         
         if (consensusStrength > 0.8) {

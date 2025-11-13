@@ -271,7 +271,9 @@ export const ParticleOverlay = forwardRef<ParticleOverlayHandle, ParticleOverlay
     };
 
     const animate = (currentTime: number) => {
-      const deltaMs = lastFrameTimeRef.current === 0 ? 16.67 : currentTime - lastFrameTimeRef.current; // Default to ~60fps on first frame
+      let deltaMs = lastFrameTimeRef.current === 0 ? 16.67 : currentTime - lastFrameTimeRef.current;
+      // Clamp deltaMs to prevent teleporting when tab is backgrounded or system is slow
+      deltaMs = Math.max(0, Math.min(deltaMs, 100)); // Cap at 100ms (~10fps minimum)
       lastFrameTimeRef.current = currentTime;
       
       updateParticles(deltaMs);

@@ -57,7 +57,7 @@ export class GuessingScene extends Phaser.Scene {
   private ambientEffectId: string | null = null;
   private isDragging: boolean = false;
   private medianPulseTween: Phaser.Tweens.Tween | null = null;
-  private medianTimeline: any | null = null;
+  private medianTimeline: Phaser.Tweens.Tween | null = null;
   private medianAnimatedX: number | null = null;
   private jitterAmp: number = 0;
   private isEmittingInternal: boolean = false;
